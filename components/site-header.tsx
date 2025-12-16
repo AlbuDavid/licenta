@@ -35,27 +35,21 @@ export function SiteHeader(){
           <NavigationMenu>
             <NavigationMenuList>
               <NavigationMenuItem>
-                <Link href="/produse" passHref>
-                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  <NavigationMenuLink href="/produse" className={navigationMenuTriggerStyle()}>
                     Produse
                   </NavigationMenuLink>
-                </Link>
-                <Link href="/oferte" passHref>
-                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  <NavigationMenuLink  href="/oferte" className={navigationMenuTriggerStyle()}>
                     Oferte
                   </NavigationMenuLink>
-                </Link>
-                <Link href="/materiale" passHref>
-                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  <NavigationMenuLink href="/materiale" className={navigationMenuTriggerStyle()}>
                     Materiale
                   </NavigationMenuLink>
-                </Link>
+
               </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
         </div>
 
-        {/* Partea Dreaptă: Meniul de Navigare */}
         
 
 
