@@ -47,7 +47,7 @@ export function SiteHeader() {
             <NavigationMenuList>
               <NavigationMenuItem>
                 <NavigationMenuTrigger className={navigationMenuTriggerStyle()}>
-                  Produse
+                  Categorii
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <ul className="grid gap-2 sm:w-[400px] md:w-[500px] md:grid-cols-2 lg:w-[600px]">
@@ -66,7 +66,7 @@ export function SiteHeader() {
                 </NavigationMenuContent>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <NavigationMenuTrigger>Oferte</NavigationMenuTrigger>
+                <NavigationMenuTrigger>Materiale</NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <ul className="grid w-[200px] gap-4">
                     <li>
@@ -96,10 +96,10 @@ export function SiteHeader() {
                   Oferte
                 </NavigationMenuLink>
                 <NavigationMenuLink
-                  href="/materiale"
+                  href="/portofoliu"
                   className={navigationMenuTriggerStyle()}
                 >
-                  Materiale
+                  Portofoliu
                 </NavigationMenuLink>
               
               </NavigationMenuItem>
@@ -112,22 +112,22 @@ export function SiteHeader() {
             <NavigationMenuList>
               <NavigationMenuItem>
                 <NavigationMenuLink
-                  href="/produse"
+                  href="/Cos"
                   className={navigationMenuTriggerStyle()}
                 >
-                  Produse
+                  Cos
                 </NavigationMenuLink>
                 <NavigationMenuLink
-                  href="/oferte"
+                  href="/profil"
                   className={navigationMenuTriggerStyle()}
                 >
-                  Oferte
+                  Profil
                 </NavigationMenuLink>
                 <NavigationMenuLink
-                  href="/materiale"
+                  href="/comenzi"
                   className={navigationMenuTriggerStyle()}
                 >
-                  Materiale
+                  Comenzi
                 </NavigationMenuLink>
               </NavigationMenuItem>
             </NavigationMenuList>

@@ -4,9 +4,10 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export default function Home() {
   return (
-    <section className="container mx-auto px-0py-12 md:py-24 lg:py-32">
+    <section className="flex h-screen w-full flex-col items-center justify-center">
+      <h1 className="mb-15 text-6xl font-bold text-black">The White Laser</h1>
       <Carousel>
-        <img src="heroImg.jpg" alt="Hero Image" />
+        <img src="laser1.jpg" alt="Hero Image" />
       </Carousel>
     </section>
   );
