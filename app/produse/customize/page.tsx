@@ -165,7 +165,7 @@ export default function CustomizePage() {
       </header>
 
       {/* Editor */}
-      <main className="p-6 max-w-screen-xl mx-auto">
+      <main className="p-6 max-w-7xl mx-auto">
         <SvgEditor svgContent={uploadedSvg} onSave={handleSave} />
       </main>
     </div>

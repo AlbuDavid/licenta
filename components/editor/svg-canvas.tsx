@@ -17,21 +17,56 @@ const FONTS = [
 const FONT_SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64, 72];
 
 // ── Fixed shape sizes (px on canvas — locked, cannot be resized by user) ─────
-// Scale: ~3.78 px/mm → 10 cm = 378 px. We halve for comfortable canvas display.
 const SHAPES = {
-  square:    { label: 'Pătrat 10×10 cm',    w: 189, h: 189, r: 0 },
-  rectangle: { label: 'Dreptunghi 20×30 cm', w: 226, h: 151, r: 0 },
-  circle:    { label: 'Cerc ⌀10 cm',         w: 0,   h: 0,   r: 94 },
+  square:    { label: 'Pătrat 10×10 cm',     w: 189, h: 189, r: 0  },
+  rectangle: { label: 'Dreptunghi 20×30 cm', w: 226, h: 151, r: 0  },
+  circle:    { label: 'Cerc ⌀10 cm',          w: 0,   h: 0,   r: 94 },
 } as const;
 
 type ShapeKey = keyof typeof SHAPES;
 
+// ── Shared helper: load SVG string onto a fabric canvas ───────────────────────
+async function loadSvgOntoCanvas(
+  fc: fabric.Canvas,
+  svgContent: string,
+  clear: boolean,
+) {
+  const cW = fc.getWidth();
+  const cH = fc.getHeight();
+
+  const addGroup = (objects: fabric.Object[], options: any) => {
+    if (!objects?.length) { alert('SVG-ul pare gol sau incompatibil.'); return; }
+    const group = (fabric.util as any).groupSVGElements
+      ? (fabric.util as any).groupSVGElements(objects.filter(Boolean), options)
+      : new (fabric as any).Group(objects.filter(Boolean));
+
+    if (clear) fc.clear();
+    const scale = Math.min((cW * 0.75) / (group.width || 1),
+                           (cH * 0.75) / (group.height || 1));
+    group.scale(scale);
+    group.set({ left: cW / 2, top: cH / 2, originX: 'center', originY: 'center' });
+    fc.add(group);
+    fc.requestRenderAll();
+  };
+
+  try {
+    // fabric v6 async API
+    const result = await (fabric as any).loadSVGFromString(svgContent);
+    addGroup(result.objects ?? result, result.options ?? {});
+  } catch {
+    // fabric v5 callback fallback
+    (fabric as any).loadSVGFromString(svgContent, (objects: fabric.Object[], options: any) => {
+      addGroup(objects, options);
+    });
+  }
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function SvgCanvas({ svgContent, onSave }: SvgCanvasProps) {
-  const canvasRef   = useRef<HTMLCanvasElement>(null);
-  const [fc, setFc] = useState<fabric.Canvas | null>(null);
+  const canvasRef      = useRef<HTMLCanvasElement>(null);
+  const addSvgInputRef = useRef<HTMLInputElement>(null);
+  const [fc, setFc]    = useState<fabric.Canvas | null>(null);
 
-  // Text-toolbar state (shown only when an IText is selected)
   const [textProps, setTextProps] = useState({
     visible: false,
     fontFamily: 'Arial',
@@ -67,27 +102,27 @@ export default function SvgCanvas({ svgContent, onSave }: SvgCanvasProps) {
     };
     window.addEventListener('keydown', onKey);
 
-    // Selection listeners → update text toolbar
+    // Text toolbar sync
     const syncTextBar = (obj?: fabric.Object) => {
       if (obj && (obj.type === 'i-text' || obj.type === 'text')) {
         const t = obj as fabric.IText;
         setTextProps({
-          visible: true,
+          visible:    true,
           fontFamily: (t.fontFamily as string) || 'Arial',
-          fontSize: (t.fontSize as number) || 24,
-          fill: (t.fill as string) || '#1a1a1a',
-          bold: t.fontWeight === 'bold',
-          italic: t.fontStyle === 'italic',
-          underline: !!t.underline,
+          fontSize:   (t.fontSize   as number) || 24,
+          fill:       (t.fill       as string) || '#1a1a1a',
+          bold:       t.fontWeight === 'bold',
+          italic:     t.fontStyle  === 'italic',
+          underline:  !!t.underline,
         });
       } else {
         setTextProps(p => ({ ...p, visible: false }));
       }
     };
 
-    canvas.on('selection:created',  e => syncTextBar(e.selected?.[0]));
-    canvas.on('selection:updated',  e => syncTextBar(e.selected?.[0]));
-    canvas.on('selection:cleared',  () => syncTextBar());
+    canvas.on('selection:created', e => syncTextBar(e.selected?.[0]));
+    canvas.on('selection:updated', e => syncTextBar(e.selected?.[0]));
+    canvas.on('selection:cleared', () => syncTextBar());
 
     setFc(canvas);
     return () => {
@@ -96,58 +131,33 @@ export default function SvgCanvas({ svgContent, onSave }: SvgCanvasProps) {
     };
   }, []);
 
-  // ── 2. Load SVG ─────────────────────────────────────────────────────────────
+  // ── 2. Load initial SVG (clears canvas) ────────────────────────────────────
   useEffect(() => {
     if (!fc || !svgContent) return;
-
-    const load = async () => {
-      try {
-        // fabric v6: async API
-        const result = await (fabric as any).loadSVGFromString(svgContent);
-        const objects: fabric.Object[] = result.objects ?? result;
-        const options = result.options ?? {};
-
-        if (!objects?.length) { alert('SVG-ul pare gol sau incompatibil.'); return; }
-
-        const group = (fabric.util as any).groupSVGElements
-          ? (fabric.util as any).groupSVGElements(objects, options)
-          : new (fabric as any).Group(objects.filter(Boolean));
-
-        fc.clear();
-        const cW = fc.getWidth(), cH = fc.getHeight();
-        const scale = Math.min((cW * 0.75) / (group.width  || 1),
-                               (cH * 0.75) / (group.height || 1));
-        group.scale(scale);
-        group.set({ left: cW / 2, top: cH / 2, originX: 'center', originY: 'center' });
-        fc.add(group);
-        fc.requestRenderAll();
-      } catch {
-        // fabric v5 fallback: callback API
-        (fabric as any).loadSVGFromString(
-          svgContent,
-          (objects: fabric.Object[], options: any) => {
-            if (!objects?.length) { alert('SVG-ul pare gol.'); return; }
-            const group = (fabric.util as any).groupSVGElements(objects, options);
-            fc.clear();
-            group.scaleToWidth(440);
-            group.set({ left: 380, top: 260, originX: 'center', originY: 'center' });
-            fc.add(group);
-            fc.requestRenderAll();
-          }
-        );
-      }
-    };
-    load();
+    loadSvgOntoCanvas(fc, svgContent, true);
   }, [fc, svgContent]);
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
+  // ── 3. Add extra SVG (keeps all existing objects) ───────────────────────────
+  const handleAddSvgFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !fc) return;
+    e.target.value = ''; // reset so same file can be added again
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const text = ev.target?.result as string;
+      loadSvgOntoCanvas(fc, text, false); // false = don't clear existing objects
+    };
+    reader.readAsText(file);
+  };
+
+  // ── 4. Add text ─────────────────────────────────────────────────────────────
   const addText = () => {
     if (!fc) return;
     const t = new fabric.IText('Textul tău', {
       left: 80, top: 80,
       fontFamily: textProps.fontFamily,
-      fontSize: textProps.fontSize,
-      fill: textProps.fill,
+      fontSize:   textProps.fontSize,
+      fill:       textProps.fill,
     });
     fc.add(t);
     fc.setActiveObject(t);
@@ -155,27 +165,59 @@ export default function SvgCanvas({ svgContent, onSave }: SvgCanvasProps) {
     fc.requestRenderAll();
   };
 
+  // ── 5. Add shape — outline only, forced to back of stack ────────────────────
   const addShape = (key: ShapeKey) => {
     if (!fc) return;
-    const lock = { lockScalingX: true, lockScalingY: true, lockSkewingX: true, lockSkewingY: true };
-    const colors: Record<ShapeKey, { fill: string; stroke: string }> = {
-      square:    { fill: '#fef9c3', stroke: '#ca8a04' },
-      rectangle: { fill: '#dcfce7', stroke: '#16a34a' },
-      circle:    { fill: '#e0e7ff', stroke: '#4f46e5' },
+
+    const STROKE_COLORS: Record<ShapeKey, string> = {
+      square:    '#ca8a04',
+      rectangle: '#16a34a',
+      circle:    '#4f46e5',
     };
+
+    const lock = {
+      lockScalingX: true, lockScalingY: true,
+      lockSkewingX: true, lockSkewingY: true,
+    };
+
     const s = SHAPES[key];
-    const c = colors[key];
     let obj: fabric.Object;
+
     if (key === 'circle') {
-      obj = new fabric.Circle({ radius: s.r, fill: c.fill, stroke: c.stroke, strokeWidth: 2, left: 200, top: 150, ...lock });
+      obj = new fabric.Circle({
+        radius: s.r,
+        fill: 'transparent',      // ← outline only, no fill
+        stroke: STROKE_COLORS[key],
+        strokeWidth: 2,
+        left: 200, top: 150,
+        ...lock,
+      });
     } else {
-      obj = new fabric.Rect({ width: s.w, height: s.h, fill: c.fill, stroke: c.stroke, strokeWidth: 2, left: 200, top: 150, ...lock });
+      obj = new fabric.Rect({
+        width: s.w, height: s.h,
+        fill: 'transparent',      // ← outline only, no fill
+        stroke: STROKE_COLORS[key],
+        strokeWidth: 2,
+        left: 200, top: 150,
+        ...lock,
+      });
     }
+
     fc.add(obj);
-    fc.setActiveObject(obj);
+
+    // ← send shape behind every other object on the canvas
+    // Try fabric v6 method first, fall back to v5
+    if (typeof (fc as any).sendObjectToBack === 'function') {
+      (fc as any).sendObjectToBack(obj);
+    } else if (typeof (fc as any).sendToBack === 'function') {
+      (fc as any).sendToBack(obj);
+    }
+
+    fc.discardActiveObject();
     fc.requestRenderAll();
   };
 
+  // ── 6. Apply text property ──────────────────────────────────────────────────
   const applyTextProp = (prop: string, value: unknown) => {
     if (!fc) return;
     const obj = fc.getActiveObject();
@@ -185,12 +227,30 @@ export default function SvgCanvas({ svgContent, onSave }: SvgCanvasProps) {
     }
   };
 
+  // ── 7. Delete selected ──────────────────────────────────────────────────────
   const deleteSelected = () => {
     if (!fc) return;
     const actives = fc.getActiveObjects();
     fc.discardActiveObject();
     actives.forEach(o => fc.remove(o));
     fc.requestRenderAll();
+  };
+
+  // ── 8. Download canvas as .svg file ────────────────────────────────────────
+  const downloadSvg = () => {
+    if (!fc) return;
+    const svgString = fc.toSVG();
+    const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'design.svg';   // ← file saved as "design.svg"
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    // notify parent page (shows the "Design salvat!" toast)
+    onSave(svgString);
   };
 
   // ── UI ───────────────────────────────────────────────────────────────────────
@@ -200,20 +260,51 @@ export default function SvgCanvas({ svgContent, onSave }: SvgCanvasProps) {
       className="flex gap-0 rounded-2xl overflow-hidden border border-gray-200 shadow-xl bg-white"
     >
       {/* ── LEFT TOOLBAR ── */}
-      <aside className="w-52 bg-gray-950 text-white flex flex-col py-5 px-3 gap-1 shrink-0">
+      <aside className="w-56 bg-gray-950 text-white flex flex-col py-5 px-3 gap-1 shrink-0">
+
         <p className="text-[10px] font-bold tracking-widest text-gray-500 uppercase px-2 mb-2">
           Instrumente
         </p>
 
-        {/* Text */}
-        <ToolBtn icon="T" label="Adaugă Text" color="blue" onClick={addText} />
+        {/* Add text */}
+        <button
+          onClick={addText}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold
+                     bg-blue-600 hover:bg-blue-500 text-white transition-colors w-full"
+        >
+          <span className="w-5 h-5 rounded bg-white/20 flex items-center justify-center text-xs font-bold">
+            T
+          </span>
+          Adaugă Text
+        </button>
+
+        {/* Add another SVG into the design */}
+        <button
+          onClick={() => addSvgInputRef.current?.click()}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold
+                     bg-violet-600 hover:bg-violet-500 text-white transition-colors w-full"
+        >
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          Adaugă SVG
+        </button>
+        {/* hidden input — triggers file picker for adding a second SVG */}
+        <input
+          ref={addSvgInputRef}
+          type="file"
+          accept=".svg,image/svg+xml"
+          className="hidden"
+          onChange={handleAddSvgFile}
+        />
 
         <hr className="border-gray-800 my-3" />
+
         <p className="text-[10px] font-bold tracking-widest text-gray-500 uppercase px-2 mb-2">
           Forme fixe
         </p>
 
-        {/* Shapes */}
         {(Object.keys(SHAPES) as ShapeKey[]).map(key => (
           <button
             key={key}
@@ -226,11 +317,14 @@ export default function SvgCanvas({ svgContent, onSave }: SvgCanvasProps) {
           </button>
         ))}
 
-        <div className="flex-1" />
+        <p className="text-[10px] text-gray-600 px-2 mt-1 leading-tight">
+          Formele apar întotdeauna în spate
+        </p>
 
+        <div className="flex-1" />
         <hr className="border-gray-800 mb-3" />
 
-        {/* Delete */}
+        {/* Delete selected */}
         <button
           onClick={deleteSelected}
           className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold
@@ -240,9 +334,8 @@ export default function SvgCanvas({ svgContent, onSave }: SvgCanvasProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
-          Șterge
+          Șterge Element
         </button>
-
         <p className="text-[10px] text-gray-600 text-center mt-2 leading-tight">
           sau apasă DELETE
         </p>
@@ -265,7 +358,8 @@ export default function SvgCanvas({ svgContent, onSave }: SvgCanvasProps) {
                   setTextProps(p => ({ ...p, fontFamily: e.target.value }));
                   applyTextProp('fontFamily', e.target.value);
                 }}
-                className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white
+                           focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {FONTS.map(f => <option key={f} value={f}>{f}</option>)}
               </select>
@@ -278,7 +372,8 @@ export default function SvgCanvas({ svgContent, onSave }: SvgCanvasProps) {
                   setTextProps(p => ({ ...p, fontSize: v }));
                   applyTextProp('fontSize', v);
                 }}
-                className="border border-gray-300 rounded-md px-2 py-1 text-sm w-16 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border border-gray-300 rounded-md px-2 py-1 text-sm w-16 bg-white
+                           focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {FONT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -286,9 +381,9 @@ export default function SvgCanvas({ svgContent, onSave }: SvgCanvasProps) {
               {/* Bold / Italic / Underline */}
               <div className="flex gap-1">
                 {[
-                  { label: 'B', prop: 'fontWeight',  on: 'bold',   off: 'normal', active: textProps.bold },
-                  { label: 'I', prop: 'fontStyle',   on: 'italic', off: 'normal', active: textProps.italic },
-                  { label: 'U', prop: 'underline',   on: true,     off: false,    active: textProps.underline },
+                  { label: 'B', prop: 'fontWeight', on: 'bold',   off: 'normal', active: textProps.bold      },
+                  { label: 'I', prop: 'fontStyle',  on: 'italic', off: 'normal', active: textProps.italic    },
+                  { label: 'U', prop: 'underline',  on: true,     off: false,    active: textProps.underline },
                 ].map(({ label, prop, on, off, active }) => (
                   <button
                     key={label}
@@ -340,18 +435,18 @@ export default function SvgCanvas({ svgContent, onSave }: SvgCanvasProps) {
         {/* ── BOTTOM BAR ── */}
         <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-between bg-gray-50">
           <p className="text-xs text-gray-400">
-            💡 Fă dublu-click pe text pentru a-l edita · Formele au dimensiuni fixe
+            💡 Dublu-click pe text pentru editare · Formele sunt fixe și apar în spate
           </p>
           <button
-            onClick={() => onSave(fc?.toSVG() ?? '')}
+            onClick={downloadSvg}
             className="flex items-center gap-2 px-5 py-2 bg-gray-950 text-white rounded-lg
                        hover:bg-gray-800 font-semibold text-sm transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Salvează Design
+            Descarcă SVG
           </button>
         </div>
       </div>
@@ -359,23 +454,7 @@ export default function SvgCanvas({ svgContent, onSave }: SvgCanvasProps) {
   );
 }
 
-// ── Small helper components ───────────────────────────────────────────────────
-
-function ToolBtn({ icon, label, color, onClick }: { icon: string; label: string; color: string; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold
-        bg-${color}-600 hover:bg-${color}-500 text-white transition-colors w-full`}
-    >
-      <span className="w-5 h-5 rounded bg-white/20 flex items-center justify-center text-xs font-bold">
-        {icon}
-      </span>
-      {label}
-    </button>
-  );
-}
-
+// ── Small helpers ─────────────────────────────────────────────────────────────
 function ShapeIcon({ type }: { type: ShapeKey }) {
   if (type === 'circle') return (
     <svg className="w-5 h-5 shrink-0 text-indigo-400" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
