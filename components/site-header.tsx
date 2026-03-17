@@ -3,6 +3,7 @@ import Link from "next/link";
 import { GiLaserburn } from "react-icons/gi";
 import { CircleCheckIcon, CircleHelpIcon, CircleIcon } from "lucide-react";
 import { AuthNav } from "@/components/auth/auth-nav";
+import { CartButton } from "@/components/cart/cart-button";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -108,16 +109,10 @@ export function SiteHeader() {
           </NavigationMenu>
         </div>
 
-        <div className="flex m-2 items-center gap-2">
+        <div className="flex m-2 items-center gap-1">
           <NavigationMenu>
             <NavigationMenuList>
               <NavigationMenuItem>
-                <NavigationMenuLink
-                  href="/Cos"
-                  className={navigationMenuTriggerStyle()}
-                >
-                  Cos
-                </NavigationMenuLink>
                 <NavigationMenuLink
                   href="/comenzi"
                   className={navigationMenuTriggerStyle()}
@@ -127,6 +122,7 @@ export function SiteHeader() {
               </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
+          <CartButton />
           <AuthNav />
         </div>
       </div>

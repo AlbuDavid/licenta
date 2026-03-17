@@ -60,6 +60,7 @@ async function getProducts(searchParams: SearchParams): Promise<ProductCardProps
       id: p.id,
       name: p.name,
       price: formatPrice(p.price),
+      priceRaw: p.price,
       category: p.category,
       imageUrl: p.imageUrl ?? "/images/produse/placeholder.jpg",
       isCustomizable: p.isCustomizable,

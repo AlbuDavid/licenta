@@ -1,4 +1,5 @@
-/* components/product-card.tsx */
+"use client";
+
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,11 +10,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useCartStore } from "@/store/cartStore";
 
 export interface ProductCardProps {
   id: string;
   name: string;
-  price: string;
+  price: string;       // formatted display string, e.g. "139,99 RON"
+  priceRaw: number;    // raw float for cart calculations
   category: string;
   imageUrl: string;
   isCustomizable: boolean;
@@ -23,10 +26,17 @@ export function ProductCard({
   id,
   name,
   price,
+  priceRaw,
   category,
   imageUrl,
   isCustomizable,
 }: ProductCardProps) {
+  const addItem = useCartStore((s) => s.addItem);
+
+  function handleAddToCart() {
+    addItem({ id, name, price: priceRaw, imageUrl, category });
+  }
+
   return (
     <Card className="group w-full flex flex-col overflow-hidden border border-border/60 shadow-none hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 rounded-xl">
       {/* Image */}
@@ -65,7 +75,11 @@ export function ProductCard({
 
       {/* Actions */}
       <CardFooter className="px-4 pb-4 flex flex-col gap-2">
-        <Button size="sm" className="w-full text-xs font-medium">
+        <Button
+          size="sm"
+          className="w-full text-xs font-medium"
+          onClick={handleAddToCart}
+        >
           Adaugă în Coș
         </Button>
         {isCustomizable && (
