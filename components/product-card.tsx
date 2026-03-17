@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 
 export interface ProductCardProps {
-  id: number;
+  id: string;
   name: string;
   price: string;
   category: string;
