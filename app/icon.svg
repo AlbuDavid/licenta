@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="80" fill="#0f172a"/>
+  <rect x="180" y="140" width="152" height="90" rx="18" fill="#e2e8f0"/>
+  <rect x="300" y="172" width="72" height="26" rx="8" fill="#94a3b8"/>
+  <polygon points="372,178 480,230 480,255 372,198" fill="#f8fafc" opacity="0.9"/>
+  <polygon points="372,183 470,228 470,252 372,193" fill="#f97316" opacity="0.7"/>
+  <ellipse cx="480" cy="242" rx="14" ry="22" fill="#fbbf24" opacity="0.95"/>
+  <ellipse cx="480" cy="242" rx="7" ry="11" fill="#fff" opacity="0.8"/>
+  <circle cx="308" cy="185" r="18" fill="#1e293b" stroke="#64748b" stroke-width="4"/>
+  <circle cx="308" cy="185" r="8" fill="#38bdf8" opacity="0.9"/>
+  <line x1="200" y1="160" x2="200" y2="210" stroke="#94a3b8" stroke-width="5" stroke-linecap="round"/>
+  <line x1="218" y1="160" x2="218" y2="210" stroke="#94a3b8" stroke-width="5" stroke-linecap="round"/>
+  <line x1="236" y1="160" x2="236" y2="210" stroke="#94a3b8" stroke-width="5" stroke-linecap="round"/>
+  <rect x="228" y="230" width="56" height="18" rx="6" fill="#475569"/>
+  <rect x="208" y="248" width="96" height="16" rx="6" fill="#334155"/>
+  <rect x="60" y="310" width="392" height="90" rx="12" fill="#292524"/>
+  <line x1="90" y1="340" x2="260" y2="340" stroke="#78716c" stroke-width="4" stroke-linecap="round"/>
+  <line x1="90" y1="358" x2="200" y2="358" stroke="#78716c" stroke-width="4" stroke-linecap="round"/>
+  <line x1="90" y1="376" x2="230" y2="376" stroke="#78716c" stroke-width="4" stroke-linecap="round"/>
+  <ellipse cx="420" cy="320" rx="30" ry="10" fill="#f97316" opacity="0.6"/>
+</svg>

@@ -27,6 +27,12 @@ const SORT_OPTIONS = [
 
 type SortOption = (typeof SORT_OPTIONS)[number]["value"];
 
+const PER_PAGE_OPTIONS = [
+  { value: "12", label: "12 produse" },
+  { value: "24", label: "24 produse" },
+  { value: "48", label: "48 produse" },
+] as const;
+
 export function ProductFilters() {
   const router = useRouter();
   const pathname = usePathname();
@@ -57,7 +63,8 @@ export function ProductFilters() {
   const currentSort = (searchParams.get("sort") ?? "default") as SortOption;
 
   function handleSortChange(value: string) {
-    router.push(`${pathname}?${createQueryString({ sort: value })}`);
+    // reset to page 1 when sort changes
+    router.push(`${pathname}?${createQueryString({ sort: value, page: null })}`);
   }
 
   // --- Category checkboxes ---
@@ -69,8 +76,18 @@ export function ProductFilters() {
       : activeCategories.filter((c) => c !== category);
 
     router.push(
-      `${pathname}?${createQueryString({ category: next.length ? next : null })}`,
+      `${pathname}?${createQueryString({
+        category: next.length ? next : null,
+        page: null,
+      })}`,
     );
+  }
+
+  // --- Per page ---
+  const currentPerPage = searchParams.get("perPage") ?? "12";
+
+  function handlePerPageChange(value: string) {
+    router.push(`${pathname}?${createQueryString({ perPage: value, page: null })}`);
   }
 
   return (
@@ -139,7 +156,10 @@ export function ProductFilters() {
             checked={searchParams.get("customizable") === "1"}
             onCheckedChange={(checked) =>
               router.push(
-                `${pathname}?${createQueryString({ customizable: checked === true ? "1" : null })}`,
+                `${pathname}?${createQueryString({
+                  customizable: checked === true ? "1" : null,
+                  page: null,
+                })}`,
               )
             }
           />
@@ -150,6 +170,27 @@ export function ProductFilters() {
             Doar personalizabile
           </Label>
         </div>
+      </div>
+
+      <Separator />
+
+      {/* Products per page */}
+      <div>
+        <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium mb-3">
+          Produse / pagină
+        </p>
+        <Select value={currentPerPage} onValueChange={handlePerPageChange}>
+          <SelectTrigger className="w-full text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PER_PAGE_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value} className="text-sm">
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </aside>
   );
