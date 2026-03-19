@@ -137,11 +137,10 @@ export function EditorLayout({ canvasSlot }: EditorLayoutProps) {
        */}
       <div className="flex flex-col h-[calc(100vh-56px)] bg-slate-700 overflow-hidden text-slate-100">
 
-        {/* ── Top Bar (two rows) ───────────────────────────────────────────── */}
-        <div className="flex flex-col bg-slate-800 border-b border-slate-700 shrink-0">
+        {/* ── Top Bar ──────────────────────────────────────────────────────── */}
+        <div className="flex bg-slate-800 border-b border-slate-700 shrink-0">
 
-          {/* ── Row 1 : static tools ──────────────────────────────────────── */}
-          <div className="flex items-center gap-1 px-3 h-10">
+          <div className="flex items-center gap-1 px-3 h-11 w-full">
 
             {/* File actions */}
             <Tooltip>
@@ -264,11 +263,11 @@ export function EditorLayout({ canvasSlot }: EditorLayoutProps) {
               <TooltipContent side="bottom">Previzualizare (Tab)</TooltipContent>
             </Tooltip>
 
-          </div>
+            <Separator orientation="vertical" className="h-4 bg-slate-600 mx-0.5" />
 
-          {/* ── Row 2 : contextual object properties ──────────────────────── */}
-          <div className="flex items-center gap-1.5 px-3 h-10 border-t border-slate-700/50">
+            {/* Contextual object properties */}
             <PropertiesBar />
+
           </div>
 
         </div>

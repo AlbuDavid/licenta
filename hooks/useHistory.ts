@@ -75,11 +75,25 @@ export function useHistory() {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (!e.ctrlKey && !e.metaKey) return;
-
-      // Ignore shortcuts while the user is typing in an input
+      // Ignore shortcuts while the user is typing in an input or editing text on canvas
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      // canvas IText editing — contenteditable div used by Fabric
+      if ((e.target as HTMLElement)?.isContentEditable) return;
+
+      // Delete / Backspace — remove selected objects
+      if (e.key === "Delete" || e.key === "Backspace") {
+        if (!canvas) return;
+        const active = canvas.getActiveObjects();
+        if (active.length === 0) return;
+        e.preventDefault();
+        active.forEach((obj) => canvas.remove(obj));
+        canvas.discardActiveObject();
+        canvas.requestRenderAll();
+        return;
+      }
+
+      if (!e.ctrlKey && !e.metaKey) return;
 
       if (e.key === "z" || e.key === "Z") {
         e.preventDefault();
@@ -95,5 +109,5 @@ export function useHistory() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [undo, redo]);
+  }, [canvas, undo, redo]);
 }

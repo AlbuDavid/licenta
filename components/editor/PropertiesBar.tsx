@@ -11,6 +11,11 @@ import type { CornerRadiiData } from "@/hooks/useCornerRadius";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -23,13 +28,8 @@ import {
   SendToBack,
   Group,
   Ungroup,
-  AlignStartVertical,
-  AlignCenterVertical,
-  AlignEndVertical,
-  AlignStartHorizontal,
-  AlignCenterHorizontal,
-  AlignEndHorizontal,
 } from "lucide-react";
+import { AlignDistributePanel } from "@/components/editor/AlignDistributePanel";
 import {
   Tooltip,
   TooltipContent,
@@ -50,6 +50,13 @@ const FONTS = [
 const TEXT_TYPES  = new Set(["i-text", "text", "textbox"]);
 const SHAPE_TYPES = new Set(["rect", "ellipse", "circle", "line", "polygon", "path"]);
 
+// Checkerboard gradient used to represent transparency
+const CHECKERBOARD =
+  "linear-gradient(45deg,#6b7280 25%,transparent 25%)," +
+  "linear-gradient(-45deg,#6b7280 25%,transparent 25%)," +
+  "linear-gradient(45deg,transparent 75%,#6b7280 75%)," +
+  "linear-gradient(-45deg,transparent 75%,#6b7280 75%)";
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Safely read a string property from a Fabric object, with a fallback. */
@@ -66,9 +73,100 @@ function num(obj: FabricObject, key: string, fallback = 0): number {
 
 /** Convert any fabric fill value to a CSS hex string for <input type="color">. */
 function toHex(fill: unknown): string {
+  if (fill === "transparent" || fill === "" || fill === null || fill === undefined)
+    return "transparent";
   if (typeof fill === "string" && fill.startsWith("#")) return fill;
-  if (typeof fill === "string" && fill !== "transparent" && fill !== "") return fill;
-  return "#1e293b"; // slate-800 default
+  if (typeof fill === "string") return fill;
+  return "#1e293b";
+}
+
+// ── ColorSwatch ───────────────────────────────────────────────────────────────
+
+/**
+ * A colored swatch button that opens a Popover with a color picker and a
+ * "Transparent" option. The swatch displays a checkerboard pattern when the
+ * value is "transparent".
+ */
+function ColorSwatch({
+  value,
+  onChange,
+  allowTransparent = true,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  allowTransparent?: boolean;
+}) {
+  const isTransparent = value === "transparent";
+  // The hex fed to <input type="color"> — must be a valid #rrggbb string
+  const colorInputVal = isTransparent ? "#ffffff" : value;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          className="w-8 h-7 rounded border border-slate-600 overflow-hidden
+                     hover:border-slate-400 transition-colors
+                     focus:outline-none focus:ring-1 focus:ring-indigo-500 shrink-0"
+          title={isTransparent ? "Transparent" : value}
+        >
+          {isTransparent ? (
+            <div
+              className="w-full h-full"
+              style={{
+                backgroundImage: CHECKERBOARD,
+                backgroundSize: "6px 6px",
+                backgroundPosition: "0 0, 0 3px, 3px -3px, -3px 0",
+              }}
+            />
+          ) : (
+            <div className="w-full h-full" style={{ backgroundColor: value }} />
+          )}
+        </button>
+      </PopoverTrigger>
+
+      <PopoverContent
+        className="w-auto p-3 bg-slate-800 border-slate-700 shadow-xl rounded-lg"
+        side="bottom"
+        align="start"
+        sideOffset={6}
+      >
+        <div className="flex flex-col gap-2.5">
+          {/* Native color picker */}
+          <input
+            type="color"
+            value={colorInputVal}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-36 h-10 rounded cursor-pointer border-0 bg-transparent p-0 block"
+            style={{ colorScheme: "dark" }}
+          />
+
+          {/* Transparent option */}
+          {allowTransparent && (
+            <button
+              onClick={() => onChange("transparent")}
+              className={`flex items-center gap-2 px-2.5 py-1.5 rounded text-xs
+                         border transition-colors w-full text-left
+                         ${isTransparent
+                           ? "border-indigo-500 text-indigo-300 bg-indigo-500/10"
+                           : "border-slate-600 text-slate-400 hover:border-slate-400 hover:text-slate-200 hover:bg-slate-700"
+                         }`}
+            >
+              {/* Mini checkerboard swatch */}
+              <span
+                className="w-4 h-4 rounded-sm border border-slate-500 shrink-0 inline-block"
+                style={{
+                  backgroundImage: CHECKERBOARD,
+                  backgroundSize: "4px 4px",
+                  backgroundPosition: "0 0, 0 2px, 2px -2px, -2px 0",
+                }}
+              />
+              Transparent
+            </button>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 // ── Local state shape ─────────────────────────────────────────────────────────
@@ -85,39 +183,15 @@ interface ShapeProps {
   strokeWidth: number;
 }
 
-// ── PropertiesBar ─────────────────────────────────────────────────────────────
-
-/**
- * Renders contextual property controls in the top bar based on what is
- * currently selected on the canvas.
- *
- * How it works:
- *  1. Subscribes to `selectedObjects` from the Zustand store.
- *  2. On each selection change, reads the current property values directly
- *     from the Fabric object and copies them into local React state.
- *     (Local state → the form reflects the selected object's real values.)
- *  3. onChange handlers update local state immediately (optimistic UI) and
- *     will call canvas update functions once Step 2 wires in the logic.
- */
-// ── Shared layer + group action buttons (rendered in every branch) ────────────
-
-interface AlignmentHandlers {
-  alignLeft:    () => void;
-  alignCenterH: () => void;
-  alignRight:   () => void;
-  alignTop:     () => void;
-  alignCenterV: () => void;
-  alignBottom:  () => void;
-}
+// ── LayerActions ──────────────────────────────────────────────────────────────
 
 function LayerActions({
   onBringForward,
   onSendBackward,
   onGroup,
   onUngroup,
-  showGroup    = false,
-  showUngroup  = false,
-  alignment,
+  showGroup   = false,
+  showUngroup = false,
 }: {
   onBringForward: () => void;
   onSendBackward: () => void;
@@ -125,78 +199,13 @@ function LayerActions({
   onUngroup?:  () => void;
   showGroup?:  boolean;
   showUngroup?: boolean;
-  alignment?:  AlignmentHandlers;
 }) {
   const btnCls = "h-7 w-7 text-slate-400 hover:text-slate-100 hover:bg-slate-700";
 
   return (
-    <div className="flex items-center gap-0.5 ml-2">
-      <Separator orientation="vertical" className="h-6 bg-slate-600 mr-1.5" />
+    <div className="flex items-center gap-0.5 ml-1">
+      <Separator orientation="vertical" className="h-6 bg-slate-600 mr-1" />
 
-      {/* ── Alignment (multi-select only) ──────────────────────────────── */}
-      {alignment && (
-        <>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className={btnCls} onClick={alignment.alignLeft}>
-                <AlignStartVertical size={14} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Aliniere stânga</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className={btnCls} onClick={alignment.alignCenterH}>
-                <AlignCenterVertical size={14} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Centru orizontal</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className={btnCls} onClick={alignment.alignRight}>
-                <AlignEndVertical size={14} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Aliniere dreapta</TooltipContent>
-          </Tooltip>
-
-          <Separator orientation="vertical" className="h-4 bg-slate-600 mx-0.5" />
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className={btnCls} onClick={alignment.alignTop}>
-                <AlignStartHorizontal size={14} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Aliniere sus</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className={btnCls} onClick={alignment.alignCenterV}>
-                <AlignCenterHorizontal size={14} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Centru vertical</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className={btnCls} onClick={alignment.alignBottom}>
-                <AlignEndHorizontal size={14} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Aliniere jos</TooltipContent>
-          </Tooltip>
-
-          <Separator orientation="vertical" className="h-4 bg-slate-600 mx-0.5" />
-        </>
-      )}
-
-      {/* ── Group / Ungroup ────────────────────────────────────────────── */}
       {showGroup && (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -219,7 +228,6 @@ function LayerActions({
         </Tooltip>
       )}
 
-      {/* ── Layer order ────────────────────────────────────────────────── */}
       <Tooltip>
         <TooltipTrigger asChild>
           <Button variant="ghost" size="icon" className={btnCls} onClick={onBringForward}>
@@ -253,7 +261,11 @@ export function PropertiesBar() {
     sendObjectBackward,
   } = useGrouping();
 
-  const alignment = useAlignment();
+  const {
+    alignTarget, setAlignTarget,
+    distributeOver, setDistributeOver,
+    align, distribute,
+  } = useAlignment();
   const { applyCornerRadii } = useCornerRadius();
   const first = selectedObjects[0] ?? null;
 
@@ -321,8 +333,6 @@ export function PropertiesBar() {
     "h-7 text-xs bg-slate-700 border-slate-600 text-slate-200 " +
     "placeholder:text-slate-500 focus-visible:ring-0 focus-visible:border-slate-400";
 
-  const labelCls = "text-[10px] text-slate-500 uppercase tracking-wider select-none";
-
   // ── Nothing selected ─────────────────────────────────────────────────────
   if (!first) {
     return (
@@ -332,13 +342,20 @@ export function PropertiesBar() {
     );
   }
 
-  // ── activeSelection (multiple objects — alignment + Group) ───────────────
+  // ── activeSelection (multiple objects — align + distribute + group) ────────
   if (hasMulti || isActiveSelec) {
     return (
-      <div className="flex items-center">
+      <div className="flex items-center gap-1">
         <span className="text-[11px] text-slate-400 select-none">
           {selectedObjects.length} obiecte selectate
         </span>
+        <AlignDistributePanel
+          objectCount={selectedObjects.length}
+          alignTarget={alignTarget}       setAlignTarget={setAlignTarget}
+          distributeOver={distributeOver} setDistributeOver={setDistributeOver}
+          align={align}
+          distribute={distribute}
+        />
         <LayerActions
           onBringForward={bringObjectForward}
           onSendBackward={sendObjectBackward}
@@ -346,17 +363,23 @@ export function PropertiesBar() {
           onUngroup={ungroupSelected}
           showGroup
           showUngroup
-          alignment={alignment}
         />
       </div>
     );
   }
 
-  // ── Single Group selected — show Ungroup ─────────────────────────────────
+  // ── Single Group selected — show align panel + Ungroup ───────────────────
   if (isGroup) {
     return (
-      <div className="flex items-center">
+      <div className="flex items-center gap-1">
         <span className="text-[11px] text-slate-400 select-none">Grup</span>
+        <AlignDistributePanel
+          objectCount={1}
+          alignTarget={alignTarget}       setAlignTarget={setAlignTarget}
+          distributeOver={distributeOver} setDistributeOver={setDistributeOver}
+          align={align}
+          distribute={distribute}
+        />
         <LayerActions
           onBringForward={bringObjectForward}
           onSendBackward={sendObjectBackward}
@@ -370,65 +393,70 @@ export function PropertiesBar() {
   // ── Text properties ──────────────────────────────────────────────────────
   if (isText) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         {/* Font family */}
-        <div className="flex flex-col gap-0.5">
-          <span className={labelCls}>Font</span>
-          <Select
-            value={textProps.fontFamily}
-            onValueChange={(v) => {
-              setTextProps((p) => ({ ...p, fontFamily: v }));
-              updateActiveObject("fontFamily", v);
-            }}
-          >
-            <SelectTrigger className={`${inputCls} w-36`}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-slate-800 border-slate-700 text-slate-200">
-              {FONTS.map((f) => (
-                <SelectItem key={f} value={f} className="text-xs focus:bg-slate-700"
-                  style={{ fontFamily: f }}>
-                  {f}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Select
+              value={textProps.fontFamily}
+              onValueChange={(v) => {
+                setTextProps((p) => ({ ...p, fontFamily: v }));
+                updateActiveObject("fontFamily", v);
+              }}
+            >
+              <SelectTrigger className={`${inputCls} w-36`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-800 border-slate-700 text-slate-200">
+                {FONTS.map((f) => (
+                  <SelectItem key={f} value={f} className="text-xs focus:bg-slate-700"
+                    style={{ fontFamily: f }}>
+                    {f}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Font</TooltipContent>
+        </Tooltip>
 
         {/* Font size */}
-        <div className="flex flex-col gap-0.5">
-          <span className={labelCls}>Mărime</span>
-          <Input
-            type="number"
-            min={6}
-            max={400}
-            value={textProps.fontSize}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setTextProps((p) => ({ ...p, fontSize: v }));
-              updateActiveObject("fontSize", v);
-            }}
-            className={`${inputCls} w-16`}
-          />
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Input
+              type="number"
+              min={6}
+              max={400}
+              value={textProps.fontSize}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setTextProps((p) => ({ ...p, fontSize: v }));
+                updateActiveObject("fontSize", v);
+              }}
+              className={`${inputCls} w-16`}
+            />
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Mărime font</TooltipContent>
+        </Tooltip>
 
-        <Separator orientation="vertical" className="h-8 bg-slate-600" />
+        <Separator orientation="vertical" className="h-4 bg-slate-600" />
 
         {/* Text color */}
-        <div className="flex flex-col gap-0.5">
-          <span className={labelCls}>Culoare</span>
-          <input
-            type="color"
-            value={textProps.fill}
-            onChange={(e) => {
-              setTextProps((p) => ({ ...p, fill: e.target.value }));
-              updateActiveObject("fill", e.target.value);
-            }}
-            className="w-7 h-7 rounded cursor-pointer border border-slate-600
-                       bg-transparent p-0.5"
-            title="Culoare text"
-          />
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span>
+              <ColorSwatch
+                value={textProps.fill}
+                allowTransparent={false}
+                onChange={(v) => {
+                  setTextProps((p) => ({ ...p, fill: v }));
+                  updateActiveObject("fill", v);
+                }}
+              />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Culoare text</TooltipContent>
+        </Tooltip>
 
         <LayerActions
           onBringForward={bringObjectForward}
@@ -441,97 +469,97 @@ export function PropertiesBar() {
   // ── Shape properties ─────────────────────────────────────────────────────
   if (isShape) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         {/* Fill color */}
-        <div className="flex flex-col gap-0.5">
-          <span className={labelCls}>Umplutură</span>
-          <input
-            type="color"
-            value={shapeProps.fill === "transparent" ? "#ffffff" : shapeProps.fill}
-            onChange={(e) => {
-              setShapeProps((p) => ({ ...p, fill: e.target.value }));
-              updateActiveObject("fill", e.target.value);
-            }}
-            className="w-7 h-7 rounded cursor-pointer border border-slate-600
-                       bg-transparent p-0.5"
-            title="Culoare umplutură"
-          />
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span>
+              <ColorSwatch
+                value={shapeProps.fill}
+                onChange={(v) => {
+                  setShapeProps((p) => ({ ...p, fill: v }));
+                  updateActiveObject("fill", v);
+                }}
+              />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Umplutură</TooltipContent>
+        </Tooltip>
 
-        <Separator orientation="vertical" className="h-8 bg-slate-600" />
+        <Separator orientation="vertical" className="h-4 bg-slate-600" />
 
         {/* Stroke color */}
-        <div className="flex flex-col gap-0.5">
-          <span className={labelCls}>Contur</span>
-          <input
-            type="color"
-            value={shapeProps.stroke}
-            onChange={(e) => {
-              setShapeProps((p) => ({ ...p, stroke: e.target.value }));
-              updateActiveObject("stroke", e.target.value);
-            }}
-            className="w-7 h-7 rounded cursor-pointer border border-slate-600
-                       bg-transparent p-0.5"
-            title="Culoare contur"
-          />
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span>
+              <ColorSwatch
+                value={shapeProps.stroke}
+                onChange={(v) => {
+                  setShapeProps((p) => ({ ...p, stroke: v }));
+                  updateActiveObject("stroke", v);
+                }}
+              />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Contur</TooltipContent>
+        </Tooltip>
 
         {/* Stroke width */}
-        <div className="flex flex-col gap-0.5">
-          <span className={labelCls}>Grosime</span>
-          <Input
-            type="number"
-            min={0}
-            max={100}
-            step={0.5}
-            value={shapeProps.strokeWidth}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              setShapeProps((p) => ({ ...p, strokeWidth: v }));
-              updateActiveObject("strokeWidth", v);
-            }}
-            className={`${inputCls} w-16`}
-          />
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-1">
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                step={0.5}
+                value={shapeProps.strokeWidth}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setShapeProps((p) => ({ ...p, strokeWidth: v }));
+                  updateActiveObject("strokeWidth", v);
+                }}
+                className={`${inputCls} w-16`}
+              />
+              <span className="text-[10px] text-slate-500 select-none">px</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Grosime contur</TooltipContent>
+        </Tooltip>
 
         {/* Per-corner radii — rect or rounded-rect path */}
         {(objType === "rect" || isRoundedRectPath) && (
           <>
-            <Separator orientation="vertical" className="h-8 bg-slate-600" />
-            <div className="flex flex-col gap-0.5">
-              <span className={labelCls}>Raze colțuri</span>
-              {/*
-               * Single row — clockwise from top-left:
-               *   [S-S] [D-S] [D-J] [S-J]
-               * Tooltip reveals the full corner name on hover.
-               */}
-              <div className="flex gap-0.5">
-                {(
-                  [
-                    { key: "rTL" as const, title: "Stânga-Sus (↖)"  },
-                    { key: "rTR" as const, title: "Dreapta-Sus (↗)"  },
-                    { key: "rBR" as const, title: "Dreapta-Jos (↘)"  },
-                    { key: "rBL" as const, title: "Stânga-Jos (↙)"  },
-                  ] as const
-                ).map(({ key, title }) => (
-                  <Input
-                    key={key}
-                    type="number"
-                    min={0}
-                    max={500}
-                    step={1}
-                    title={title}
-                    value={cornerRadii[key]}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      const next = { ...cornerRadii, [key]: v };
-                      setCornerRadii(next);
-                      applyCornerRadii(next.rTL, next.rTR, next.rBR, next.rBL);
-                    }}
-                    className={`${inputCls} w-14`}
-                  />
-                ))}
-              </div>
+            <Separator orientation="vertical" className="h-4 bg-slate-600" />
+            <div className="flex items-center gap-0.5">
+              {(
+                [
+                  { key: "rTL" as const, title: "Rază colț Stânga-Sus (↖)"  },
+                  { key: "rTR" as const, title: "Rază colț Dreapta-Sus (↗)"  },
+                  { key: "rBR" as const, title: "Rază colț Dreapta-Jos (↘)"  },
+                  { key: "rBL" as const, title: "Rază colț Stânga-Jos (↙)"  },
+                ] as const
+              ).map(({ key, title }) => (
+                <Tooltip key={key}>
+                  <TooltipTrigger asChild>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={500}
+                      step={1}
+                      value={cornerRadii[key]}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        const next = { ...cornerRadii, [key]: v };
+                        setCornerRadii(next);
+                        applyCornerRadii(next.rTL, next.rTR, next.rBR, next.rBL);
+                      }}
+                      className={`${inputCls} w-14`}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">{title}</TooltipContent>
+                </Tooltip>
+              ))}
             </div>
           </>
         )}

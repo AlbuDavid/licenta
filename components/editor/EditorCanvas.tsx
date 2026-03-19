@@ -19,6 +19,7 @@ import { useSelectionSync } from "@/hooks/useSelectionSync";
 import { useSnapping } from "@/hooks/useSnapping";
 import { useHistory } from "@/hooks/useHistory";
 import { useDrawingMode } from "@/hooks/useDrawingMode";
+import { useSelectionBehavior } from "@/hooks/useSelectionBehavior";
 
 export default function EditorCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -30,6 +31,7 @@ export default function EditorCanvas() {
   useSnapping();
   useHistory();
   useDrawingMode();
+  useSelectionBehavior();
 
   return (
     // Container fills the canvas area slot — ResizeObserver tracks its size
