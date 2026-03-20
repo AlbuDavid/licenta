@@ -20,6 +20,8 @@ import {
   Eye,
   Save,
   Download,
+  Braces,
+  Camera,
   Undo2,
   Redo2,
   ImagePlus,
@@ -86,6 +88,10 @@ export function EditorLayout({ canvasSlot }: EditorLayoutProps) {
   const zoomIn        = useEditorStore((s) => s.zoomIn);
   const zoomOut       = useEditorStore((s) => s.zoomOut);
 
+  const mode          = useEditorStore((s) => s.mode);
+  const setMode       = useEditorStore((s) => s.setMode);
+  const isPreview     = mode === "preview";
+
   const undo          = useEditorStore((s) => s.undo);
   const redo          = useEditorStore((s) => s.redo);
   const historyIndex  = useEditorStore((s) => s.historyIndex);
@@ -95,7 +101,8 @@ export function EditorLayout({ canvasSlot }: EditorLayoutProps) {
 
   const { addImage, addSVG } = useEditorTools();
   const { loadProductTemplate, clearTemplate, TEMPLATES } = useProductTemplate();
-  const { exportSVG } = useExport();
+  const { exportSVG, exportJSON, generateThumbnail } = useExport();
+  const designThumbnail = useEditorStore((s) => s.designThumbnail);
   const { save, status: saveStatus } = useSave();
   const [templateVal, setTemplateVal] = useState("");
 
@@ -165,6 +172,43 @@ export function EditorLayout({ canvasSlot }: EditorLayoutProps) {
               </TooltipTrigger>
               <TooltipContent side="bottom">Exportă SVG</TooltipContent>
             </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon"
+                  className="h-7 w-7 text-slate-400 hover:text-slate-100 hover:bg-slate-700"
+                  onClick={() => exportJSON()}>
+                  <Braces size={14} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Descarcă JSON (vector data)</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon"
+                  className="h-7 w-7 text-slate-400 hover:text-slate-100 hover:bg-slate-700"
+                  onClick={() => generateThumbnail()}>
+                  <Camera size={14} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Captează miniatură (pentru coș)</TooltipContent>
+            </Tooltip>
+
+            {/* Thumbnail preview — appears after first capture */}
+            {designThumbnail && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={designThumbnail}
+                    alt="Miniatură design"
+                    className="h-7 w-7 rounded object-cover border border-slate-600 cursor-default"
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Miniatură curentă</TooltipContent>
+              </Tooltip>
+            )}
 
             <Separator orientation="vertical" className="h-4 bg-slate-600 mx-0.5" />
 
@@ -252,15 +296,23 @@ export function EditorLayout({ canvasSlot }: EditorLayoutProps) {
 
             <Separator orientation="vertical" className="h-4 bg-slate-600 mx-0.5" />
 
-            {/* Preview mode — icon only */}
+            {/* Preview mode toggle */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon"
-                  className="h-7 w-7 text-slate-400 hover:text-slate-100 hover:bg-slate-700">
+                  className={`h-7 w-7 transition-colors ${
+                    isPreview
+                      ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                      : "text-slate-400 hover:text-slate-100 hover:bg-slate-700"
+                  }`}
+                  aria-pressed={isPreview}
+                  onClick={() => setMode(isPreview ? "design" : "preview")}>
                   <Eye size={14} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Previzualizare (Tab)</TooltipContent>
+              <TooltipContent side="bottom">
+                {isPreview ? "Ieși din previzualizare" : "Previzualizare laser (Tab)"}
+              </TooltipContent>
             </Tooltip>
 
             <Separator orientation="vertical" className="h-4 bg-slate-600 mx-0.5" />

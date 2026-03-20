@@ -1,6 +1,6 @@
 "use client";
 
-import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingBag, Paperclip } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import {
   Sheet,
@@ -54,13 +54,20 @@ export function CartDrawer() {
             <ul className="space-y-4">
               {items.map((item) => (
                 <li key={item.id} className="flex gap-4">
-                  {/* Image */}
-                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-slate-100">
+                  {/* Image — show uploaded design preview when available */}
+                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-slate-100">
                     <img
                       src={item.imageUrl}
                       alt={item.name}
                       className="h-full w-full object-cover"
                     />
+                    {item.customDesign && /\.(jpe?g|png|webp|svg)$/i.test(item.customDesign.fileName) && (
+                      <img
+                        src={item.customDesign.fileUrl}
+                        alt="Design personalizat"
+                        className="absolute inset-0 h-full w-full object-contain p-1 bg-white/80"
+                      />
+                    )}
                   </div>
 
                   {/* Details */}
@@ -72,6 +79,17 @@ export function CartDrawer() {
                       <p className="text-sm font-medium text-slate-900 leading-snug line-clamp-2">
                         {item.name}
                       </p>
+                      {item.customDesign && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Paperclip className="size-3 text-slate-400 shrink-0" />
+                          <span className="text-[11px] text-slate-500 truncate max-w-[140px]">
+                            {item.customDesign.fileName}
+                          </span>
+                          <span className="text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 py-0.5 shrink-0">
+                            Personalizat
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center justify-between">
                       {/* Quantity controls */}

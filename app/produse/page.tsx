@@ -73,7 +73,7 @@ async function getProducts(searchParams: SearchParams): Promise<ProductsResult> 
           : { createdAt: "desc" as const };
 
   try {
-    const [rawProducts, total] = await db.$transaction([
+    const [rawProducts, total] = await Promise.all([
       db.product.findMany({
         where,
         orderBy,
@@ -196,7 +196,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                     <PaginationContent>
                       <PaginationItem>
                         <PaginationPrevious
-                          href={page > 1 ? buildPageHref(resolvedParams, page - 1) : undefined}
+                          href={page > 1 ? buildPageHref(resolvedParams, page - 1) : "#"}
                           aria-disabled={page <= 1}
                           className={page <= 1 ? "pointer-events-none opacity-40" : ""}
                         />
@@ -221,7 +221,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
                       <PaginationItem>
                         <PaginationNext
-                          href={page < totalPages ? buildPageHref(resolvedParams, page + 1) : undefined}
+                          href={page < totalPages ? buildPageHref(resolvedParams, page + 1) : "#"}
                           aria-disabled={page >= totalPages}
                           className={page >= totalPages ? "pointer-events-none opacity-40" : ""}
                         />

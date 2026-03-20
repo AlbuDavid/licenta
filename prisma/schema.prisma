@@ -53,13 +53,23 @@ model VerificationToken {
 }
 
 model Product {
-  id             String   @id @default(cuid())
-  name           String
-  description    String?
-  price          Float
-  imageUrl       String?
-  category       String   @default("General")
-  isCustomizable Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String           @id @default(cuid())
+  name            String
+  description     String?
+  price           Float
+  imageUrl        String?
+  category        String           @default("General")
+  isCustomizable  Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  uploadedDesigns UploadedDesign[]
+}
+
+model UploadedDesign {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  fileUrl   String
+  fileName  String
+  createdAt DateTime @default(now())
 }

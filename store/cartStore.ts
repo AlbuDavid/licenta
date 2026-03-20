@@ -1,13 +1,21 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+export interface CustomDesign {
+  designId: string;
+  fileUrl: string;
+  fileName: string;
+}
+
 export interface CartItem {
-  id: string;
+  id: string;           // unique cart key: productId or `${productId}_${designId}`
+  productId: string;    // always the real product id
   name: string;
-  price: number; // raw float, e.g. 139.99
+  price: number;        // raw float, e.g. 139.99
   imageUrl: string;
   category: string;
   quantity: number;
+  customDesign?: CustomDesign;
 }
 
 interface CartStore {
@@ -15,7 +23,8 @@ interface CartStore {
   isOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
-  addItem: (item: Omit<CartItem, "quantity">) => void;
+  addItem: (item: Omit<CartItem, "quantity" | "customDesign">) => void;
+  addCustomItem: (item: Omit<CartItem, "quantity">) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
@@ -44,6 +53,11 @@ export const useCartStore = create<CartStore>()(
           set({ items: [...get().items, { ...newItem, quantity: 1 }] });
         }
         set({ isOpen: true });
+      },
+
+      // Custom items always create a new cart entry (never merge quantities)
+      addCustomItem: (newItem) => {
+        set({ items: [...get().items, { ...newItem, quantity: 1 }], isOpen: true });
       },
 
       removeItem: (id) =>
