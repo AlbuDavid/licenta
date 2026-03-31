@@ -1,0 +1,878 @@
+================================================================================
+                    THE WHITE LASER - PROJECT DOCUMENTATION
+                         Complete Architecture Overview
+================================================================================
+
+Generated: March 25, 2026
+
+================================================================================
+1. PROJECT OVERVIEW
+================================================================================
+
+Project Name: The White Laser
+Type: E-commerce Platform & Vector Editor (B2C/B2B)
+Purpose: Premium product configurator and storefront for slate and wood products
+         with integrated vector editor for laser engraving design customization
+
+Key Capabilities:
+  • Product catalog browsing and filtering
+  • Interactive vector editor (Fabric.js-based canvas)
+  • User authentication with email verification
+  • Design customization and saving
+  • Order management system
+  • Admin panel for product and order management
+
+
+================================================================================
+2. TECHNOLOGY STACK
+================================================================================
+
+Frontend Framework:
+  • Next.js 16 (App Router) - Modern React metaframework
+  • React 19.2.0 - UI library
+  • TypeScript - Strict type safety
+  • Tailwind CSS v4 - Utility-first CSS framework
+  • PostCSS 4 - CSS processing
+
+UI Component Library:
+  • shadcn/ui - Reusable component library built on Radix UI
+  • Radix UI v1 - Headless UI primitives (Dialog, Select, Dropdown, etc.)
+  • Lucide React - Icon library
+  • React Icons - Additional icon library
+
+Vector Editor & Canvas:
+  • Fabric.js v7.1.0 - HTML5 canvas library for interactive drawing
+  • Custom hooks architecture for canvas functionality
+
+State Management:
+  • Zustand v5.0.12 - Lightweight state management
+  • React Context (for auth via NextAuth)
+
+Backend & Database:
+  • Prisma 7 - TypeScript ORM
+  • @prisma/adapter-pg - PostgreSQL adapter for Prisma 7
+  • PostgreSQL (via Neon) - Serverless relational database
+  • pg - PostgreSQL client
+
+Authentication:
+  • NextAuth v4.24.13 - Authentication framework
+  • JWT strategy with email/password (CredentialsProvider)
+  • Email verification via verification tokens
+  • bcryptjs - Password hashing
+
+Email Service:
+  • Nodemailer - Email sending (SMTP)
+
+File Upload:
+  • UploadThing v7.7.4 - File upload service
+  • @uploadthing/react - UploadThing React integration
+
+Data Visualization:
+  • Recharts - Chart library for analytics/reporting
+  • TanStack React Table - Advanced table component
+
+Other Utilities:
+  • uuid - Unique ID generation
+  • clsx - Conditional CSS class names
+  • class-variance-authority - Component variant management
+  • tailwind-merge - Merge Tailwind CSS classes intelligently
+  • react-resizable-panels - Resizable panel layouts
+  • embla-carousel-react - Carousel component
+
+
+================================================================================
+3. DATABASE ARCHITECTURE
+================================================================================
+
+Database System: PostgreSQL (Neon Serverless)
+ORM: Prisma 7 with @prisma/adapter-pg
+
+DATABASE MODELS & RELATIONSHIPS:
+
+A. USER (Authentication & Profile)
+   ├─ id (cuid - unique identifier)
+   ├─ name (optional - display name)
+   ├─ email (unique - login identifier)
+   ├─ emailVerified (DateTime - marks verified accounts)
+   ├─ password (hashed with bcrypt)
+   ├─ image (optional - profile picture)
+   ├─ role (USER or ADMIN)
+   ├─ createdAt & updatedAt (timestamps)
+   └─ Relations:
+      ├─ designs[] (1:N - User can have many designs)
+      └─ orders[] (1:N - User can have many orders)
+
+B. DESIGN (Canvas Designs)
+   ├─ id (cuid)
+   ├─ userId (foreign key - required, cascade delete)
+   ├─ name (default: "Design fără titlu")
+   ├─ canvasJson (String - full Fabric.js canvas.toJSON() payload)
+   ├─ createdAt & updatedAt
+   └─ Relations:
+      └─ user (N:1 - belongs to User)
+
+C. PRODUCT (Catalog Items)
+   ├─ id (cuid)
+   ├─ name (product name)
+   ├─ description (optional - product details)
+   ├─ price (Float - unit price in RON)
+   ├─ imageUrl (optional - product image)
+   ├─ category (default: "General")
+   ├─ isCustomizable (boolean - can be used with custom designs)
+   ├─ createdAt & updatedAt
+   └─ Relations:
+      ├─ uploadedDesigns[] (1:N - uploaded template designs)
+      └─ orderItems[] (1:N - referenced in orders)
+
+D. VERIFICATION TOKEN (Email Verification)
+   ├─ id (cuid)
+   ├─ email (recipient email)
+   ├─ token (unique - verification code)
+   └─ expires (DateTime - token expiration)
+
+E. UPLOADED DESIGN (Product Templates)
+   ├─ id (cuid)
+   ├─ productId (foreign key - required, cascade delete)
+   ├─ fileUrl (path to uploaded design file)
+   ├─ fileName (original filename)
+   ├─ createdAt
+   └─ Relations:
+      └─ product (N:1 - belongs to Product)
+
+F. ORDER (Purchase Orders)
+   ├─ id (cuid)
+   ├─ userId (foreign key - optional, set null on user delete)
+   ├─ status (PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED)
+   ├─ total (Float - order total in RON)
+   ├─ createdAt & updatedAt
+   └─ Relations:
+      ├─ user (N:1 - belongs to User, optional)
+      └─ items[] (1:N - order line items)
+
+G. ORDER ITEM (Order Line Items)
+   ├─ id (cuid)
+   ├─ orderId (foreign key - required, cascade delete)
+   ├─ productId (foreign key - required)
+   ├─ productName (String - snapshot of name at purchase)
+   ├─ price (Float - snapshot of price at purchase)
+   ├─ quantity (Int)
+   └─ Relations:
+      ├─ order (N:1 - belongs to Order)
+      ├─ product (N:1 - belongs to Product)
+      └─ customDesign (1:1 optional - OrderCustomDesign)
+
+H. ORDER CUSTOM DESIGN (Custom Design Files in Orders)
+   ├─ id (cuid)
+   ├─ orderItemId (unique foreign key - 1:1 relationship)
+   ├─ fileUrl (path to custom design file)
+   ├─ fileName (design filename)
+   ├─ createdAt
+   └─ Relations:
+      └─ orderItem (1:1 - belongs to OrderItem)
+
+
+KEY DATABASE PATTERNS:
+  • cuid() for all IDs (cryptographically secure, sortable)
+  • Soft relationships with snapshots (orderItem stores productName & price at purchase time)
+  • Cascade deletes for user/order/product deletions
+  • Set null for optional user references (guest orders possible)
+
+
+================================================================================
+4. PROJECT STRUCTURE & FILE ORGANIZATION
+================================================================================
+
+ROOT LEVEL FILES:
+  • package.json - Dependencies and scripts
+  • tsconfig.json - TypeScript configuration (strict mode)
+  • next.config.ts - Next.js configuration
+  • prisma.config.ts - Prisma 7 configuration (datasource URL)
+  • middleware.ts - Next.js middleware (auth, etc.)
+  • components.json - shadcn/ui configuration
+  • eslint.config.mjs - Code linting rules
+  • postcss.config.mjs - PostCSS configuration
+  • README.md - Project readme
+
+DIRECTORY STRUCTURE:
+
+📁 /app - Next.js App Router pages and layouts
+   📁 /components - React components
+      📁 /ui - shadcn/ui components (Button, Card, Input, Dialog, etc.)
+      📁 /editor - Fabric.js canvas components
+      📁 /auth - Authentication forms and pages
+      📁 /cart - Shopping cart UI (CartButton, CartDrawer)
+      📁 /admin - Admin panel components
+      📁 /shared - Reusable components (ProductFilters, etc.)
+   
+   📁 /hooks - Custom React hooks
+   
+   📁 /lib - Utility functions and services
+      • db.ts - Prisma client singleton with @prisma/adapter-pg
+      • auth.ts - NextAuth configuration and callbacks
+      • mail.ts - Email sending via Nodemailer
+      • utils.ts - Helper functions (formatPrice, formatDate, etc.)
+      • uploadthing.ts - UploadThing configuration
+      📁 /generated/prisma - Auto-generated Prisma client
+   
+   📁 /prisma - Database schema and migrations
+      • schema.prisma - Data models and enums
+      • seed.ts - Database seeding script
+      📁 /migrations - Migration history
+   
+   📁 /store - Zustand state stores
+   
+   📁 /public - Static assets
+      📁 /images
+      📁 /uploads
+
+ROUTING STRUCTURE (App Router):
+
+/
+├─ layout.tsx (Root layout with Providers)
+├─ page.tsx (Home page)
+│
+├─ (public)/ (Public pages group)
+│  ├─ produse/ (Product catalog)
+│  │  └─ customize/ (Customization page)
+│  └─ (editor)/ (Editor pages group)
+│     ├─ layout.tsx (Full-screen editor layout)
+│     └─ editor/
+│        └─ page.tsx (Vector editor page)
+│
+├─ auth/ (Authentication pages)
+│  ├─ layout.tsx (Auth layout)
+│  ├─ login/ (Login page)
+│  ├─ register/ (Register page)
+│  └─ error/ (Auth error page)
+│
+├─ admin/ (Admin panel)
+│  ├─ produse/ (Product management)
+│  └─ comenzi/ (Order management)
+│
+└─ api/ (API routes)
+   ├─ auth/ (NextAuth)
+   │  └─ [...nextauth]/
+   │     └─ verify/ (Email verification endpoint)
+   ├─ designs/ (Design save/load)
+   │  └─ upload/
+   └─ uploadthing/ (UploadThing API)
+
+
+================================================================================
+5. KEY FEATURES & FUNCTIONALITY
+================================================================================
+
+A. AUTHENTICATION SYSTEM
+   • Email-based registration and login
+   • Password hashing with bcryptjs
+   • Email verification via verification tokens
+   • JWT session management via NextAuth
+   • Role-based access (USER and ADMIN)
+   • Session persistence
+
+B. PRODUCT CATALOG
+   • Product listing with filtering by category
+   • Product details and images
+   • Customizable product flag
+   • Price display (formatted)
+   • Stock/inventory tracking
+
+C. VECTOR EDITOR (Fabric.js Canvas)
+   • Interactive canvas for design creation
+   • Shape tools (rectangle, ellipse, line, text)
+   • Object selection and manipulation
+   • Alignment and distribution
+   • Grouping/ungrouping
+   • Undo/redo history
+   • Freehand drawing mode
+   • Pan and zoom navigation
+   • Corner radius for shapes
+   • Object snapping guides
+   • Export to PNG/SVG
+   • Save designs to database
+   • Load product templates onto canvas
+
+D. SHOPPING CART
+   • Add/remove products
+   • Local storage persistence
+   • Cart drawer UI
+
+E. ORDER MANAGEMENT
+   • Order creation from cart
+   • Order status tracking
+   • Order details view
+   • Custom design attachment to orders
+   • Admin order management dashboard
+
+F. DESIGN MANAGEMENT
+   • Save canvas designs to database
+   • Load saved designs
+   • Design naming and updates
+
+
+================================================================================
+6. AUTHENTICATION FLOW (NextAuth + Email Verification)
+================================================================================
+
+REGISTRATION FLOW:
+  1. User fills registration form (email, password, name)
+  2. POST /api/auth/register
+  3. Password hashed with bcryptjs
+  4. User created in database (emailVerified = null)
+  5. VerificationToken generated with unique token
+  6. Email sent via Nodemailer with verification link
+  7. User redirected to login page
+  
+VERIFICATION FLOW:
+  1. User clicks email verification link
+  2. POST /api/auth/verify with token
+  3. Token validated against VerificationToken
+  4. If valid: User.emailVerified = now(), token deleted
+  5. User can now login
+
+LOGIN FLOW:
+  1. User submits email and password on /auth/login
+  2. NextAuth CredentialsProvider validates credentials
+  3. Email must be verified (emailVerified is not null)
+  4. JWT created and stored in session cookie
+  5. Session includes: id, email, name, role
+  6. Redirect to dashboard/home
+
+SESSION MANAGEMENT:
+  • JWT-based sessions (cookies)
+  • Session callbacks extend JWT with id and role
+  • Middleware protects routes requiring authentication
+  • useSession() hook for client-side auth checks
+
+
+================================================================================
+7. API ARCHITECTURE
+================================================================================
+
+REQUEST/RESPONSE PATTERNS:
+  • JSON request/response format
+  • Typed responses using TypeScript interfaces
+  • Error handling with try/catch
+  • Proper HTTP status codes
+
+API ENDPOINTS:
+
+/api/auth/[...nextauth]
+  └─ GET|POST - NextAuth authentication handler
+     Handles login, logout, JWT callback, session management
+
+/api/auth/verify
+  └─ POST - Email verification endpoint
+     Input: { token: string }
+     Output: { success: boolean } or error message
+
+/api/designs
+  └─ GET - List user's saved designs (protected)
+  └─ POST - Save design to database (protected)
+     Input: { name: string, canvasJson: string }
+
+/api/designs/upload
+  └─ POST - Upload design file (UploadThing integration)
+
+/api/uploadthing/core.ts
+  └─ UploadThing configuration for file uploads
+
+
+================================================================================
+8. STATE MANAGEMENT (Zustand)
+================================================================================
+
+STORE: /store/editorStore.ts
+Purpose: Manage vector editor canvas state
+
+State:
+  • canvas - Fabric.js canvas reference
+  • selectedObjects - Currently selected canvas objects
+  • zoom - Current zoom level
+  • activeTool - Selected tool (select, rect, ellipse, line, text, pan, draw)
+  • history - Undo/redo snapshot stack (max 50 snapshots)
+  • isRestoringHistory - Flag to prevent recursive snapshots during undo/redo
+  • setCanvas(canvas) - Set canvas reference
+  • setSelectedObjects(objects) - Update selection
+  • setZoom(zoom) - Update zoom level
+  • setActiveTool(tool) - Change active tool
+  • addHistorySnapshot() - Record canvas state
+  • undo() - Restore previous canvas state
+  • redo() - Restore next canvas state
+
+STORE: /store/cartStore.ts
+Purpose: Manage shopping cart
+
+State:
+  • items[] - Cart items with product ID, quantity, price
+  • addItem(product, quantity) - Add product to cart
+  • removeItem(id) - Remove item from cart
+  • updateQuantity(id, quantity) - Update item quantity
+  • clear() - Empty cart
+
+Features:
+  • Persistent storage (localStorage key: 'white-laser-cart')
+  • Zustand persist middleware
+
+CONTEXT: NextAuth SessionProvider
+Purpose: Authentication context
+
+Provides:
+  • session - Current user session data
+  • useSession() hook for component access
+
+
+================================================================================
+9. VECTOR EDITOR ARCHITECTURE (Fabric.js)
+================================================================================
+
+The vector editor is built with custom React hooks that isolate Fabric.js logic
+from UI components. Page components call hook APIs only - no raw fabric.* calls.
+
+CUSTOM HOOKS (Canvas Functionality):
+
+useFabricCanvas
+  • Initializes Fabric.js canvas on mount
+  • Sets up ResizeObserver for responsive sizing
+  • Calculates initial zoom to fit 4000mm document width
+  • Saves canvas reference to editorStore
+  • Handles canvas cleanup on unmount
+
+useEditorTools
+  • Manages tool activation (select, rect, ellipse, line, text, pan, draw)
+  • Creates objects based on active tool
+  • Handles tool-specific event management
+
+useCanvasEvents
+  • Registers Fabric.js event listeners (object:added, object:modified, etc.)
+  • Syncs canvas state to Zustand store
+  • Updates selection when objects are modified
+
+useSelectionSync
+  • Keeps editorStore.selectedObjects synchronized with canvas selection
+  • Triggers UI updates when selection changes
+
+useHistory (Undo/Redo)
+  • Records canvas state snapshots in editorStore
+  • Implements undo() and redo()
+  • Prevents recursive snapshots with isRestoringHistory flag
+  • Limits history to 50 snapshots
+
+useAlignment
+  • Align selected objects (left, center, right, top, middle, bottom)
+  • Distribute objects evenly
+
+useGrouping
+  • Group selected objects together
+  • Ungroup grouped objects
+
+useCornerRadius
+  • Apply rounded corners to rectangle objects
+
+useSnapping
+  • Display snap guides when moving/resizing objects
+  • Snap to grid, guides, or object edges
+
+useDrawingMode
+  • Toggle freehand drawing mode
+  • Manage brush properties
+
+useCanvasNavigation
+  • Pan canvas by dragging
+  • Zoom in/out
+  • Keyboard navigation (arrow keys)
+  • Zoom to fit all objects
+
+useExport
+  • Export canvas to PNG format
+  • Export canvas to SVG format
+
+useSave
+  • Save design JSON to database
+  • Call /api/designs endpoint
+  • Store canvas.toJSON() as canvasJson
+
+useProductTemplate
+  • Load product boundary/template onto canvas
+  • Initialize canvas with product shape
+
+useObjectUpdater
+  • Batch-update properties on selected objects
+  • Update fill color, stroke, opacity, etc.
+
+COORDINATE SYSTEM:
+  • Document width: 4000mm (internal coordinate space)
+  • Initial zoom calculated to fit document in viewport
+  • Rendering pixels converted from millimeters
+
+CANVAS COMPONENTS:
+
+EditorCanvas.tsx
+  • Wrapper component that calls all hooks
+  • Renders <canvas> element with fabric attached
+  • Handles responsiveness via ResizeObserver
+
+EditorLayout.tsx
+  • Overall editor page layout
+  • Canvas on left, properties/tools on right
+  • Toolbar at top
+
+PropertiesBar.tsx
+  • Properties panel for selected objects
+  • Update object properties in real-time
+
+AlignDistributePanel.tsx
+  • Alignment and distribution UI
+
+svg-canvas.tsx
+  • Alternative SVG rendering of canvas
+
+
+================================================================================
+10. KEY COMPONENTS
+================================================================================
+
+LAYOUT COMPONENTS:
+
+RootLayout (/app/layout.tsx)
+  • Wraps app with <Providers>
+  • NextAuth SessionProvider for auth
+  • Renders global <SiteHeader>
+  • Renders global <CartDrawer>
+  • Tailwind CSS and global styles
+
+SiteHeader (/components/site-header.tsx)
+  • Navigation bar
+  • Logo and branding
+  • Nav links (products, dashboard, admin)
+  • User menu (profile, logout)
+  • Cart button
+
+CartDrawer (/components/cart/cart-drawer.tsx)
+  • Sliding drawer panel
+  • Displays cart items
+  • Checkout button
+
+PRODUCT COMPONENTS:
+
+ProductCard (/components/product-card.tsx)
+  • Product image
+  • Name, description
+  • Price (formatted)
+  • "Customize" button links to editor
+
+ProductFilters (/components/shared/ProductFilters.tsx)
+  • Filter by category
+  • Search/autocomplete
+
+AUTHENTICATION COMPONENTS:
+
+LoginForm (/components/auth/login-form.tsx)
+  • Email and password inputs
+  • Submit handler calls NextAuth signin
+  • Error display and validation
+
+RegisterForm (/components/auth/register-form.tsx)
+  • Registration form with validation
+  • Calls POST /api/auth/register
+  • Email verification notice
+
+ADMIN COMPONENTS:
+
+AddProductModal (/components/admin/AddProductModal.tsx)
+  • Modal form to add new products
+  • Product details input
+
+OrderDetailsSheet (/components/admin/OrderDetailsSheet.tsx)
+  • Slide-out panel showing order details
+  • Order items and status
+
+
+================================================================================
+11. CUSTOM HOOKS
+================================================================================
+
+EDITOR HOOKS (in /hooks/):
+
+All hooks follow a consistent pattern:
+  • Receive canvas or store from context/parameters
+  • Return handler functions and state
+  • No side effects outside the hook
+  • Properly clean up event listeners on unmount
+
+useFabricCanvas
+  • Canvas initialization and lifecycle
+
+useEditorTools
+  • Tool management and object creation
+
+useCanvasEvents
+  • Fabric event listener management
+
+useSelectionSync
+  • Selection state synchronization
+
+useHistory
+  • Undo/redo implementation
+
+useAlignment
+  • Alignment operations
+
+useGrouping
+  • Grouping operations
+
+useCornerRadius
+  • Rounded corner styling
+
+useSnapping
+  • Snap guides and alignment helpers
+
+useDrawingMode
+  • Freehand drawing
+
+useCanvasNavigation
+  • Pan, zoom, scroll
+
+useExport
+  • Export functionality
+
+useSave
+  • Design persistence
+
+useProductTemplate
+  • Template loading
+
+useObjectUpdater
+  • Batch object property updates
+
+usePreviewMode
+  • Canvas preview/presentation mode
+
+useSelectionBehavior
+  • Selection interaction patterns
+
+
+================================================================================
+12. DESIGN SYSTEM & UI
+================================================================================
+
+DESIGN LANGUAGE:
+  • Minimalist, premium aesthetic
+  • Slate tones for base colors (slate-50 to slate-900)
+  • Warm neutrals and wood-inspired accents
+  • Clean, spacious layouts
+  • Consistent spacing using Tailwind scale
+  • High contrast for accessibility
+
+SHADCN/UI COMPONENTS USED:
+  • Button - CTA and interaction buttons
+  • Card - Content containers
+  • Input - Text input fields
+  • Dialog - Modal dialogs
+  • Sheet - Slide-out panels
+  • Select - Dropdown selections
+  • Label - Form labels
+  • Checkbox - Boolean inputs
+  • Radio - Single-choice options
+  • Switch - Toggle switches
+  • Dropdown Menu - Context menus
+  • Menubar - Application menu bar
+  • Badge - Status indicators
+  • Progress - Progress indicators
+  • Table - Data display tables
+  • Tooltip - Contextual tooltips
+  • Separator - Visual dividers
+  • Navigation Menu - Navigation structures
+  • Popover - Floating content panels
+  • Carousel - Image carousels
+  • Aspect Ratio - Media containers
+
+STYLING:
+  • Tailwind CSS v4 for utility styling
+  • @tailwindcss/postcss for processing
+  • tailwind-merge for intelligent class merging
+  • clsx for conditional class names
+  • class-variance-authority for component variants
+
+
+================================================================================
+13. CONFIGURATION FILES
+================================================================================
+
+tsconfig.json
+  • TypeScript strict mode enabled
+  • Target: ES2020
+  • Module: esnext
+  • Path aliases: @ = root directory
+  • JSX support for React
+
+next.config.ts
+  • Next.js configuration
+  • Image optimization
+  • Build configuration
+
+prisma.config.ts (Prisma 7)
+  • Datasource provider: postgresql
+  • URL from environment (not in schema.prisma)
+  • Database adapter configuration
+
+middleware.ts
+  • NextAuth middleware for auth protection
+  • Route protection and redirects
+
+components.json
+  • shadcn/ui configuration
+  • Component paths and settings
+  • Tailwind CSS integration
+
+.eslintrc
+  • Code quality rules
+  • Next.js and TypeScript linting
+
+
+================================================================================
+14. ENVIRONMENT & DEPENDENCIES
+================================================================================
+
+REQUIRED ENVIRONMENT VARIABLES (typically in .env.local):
+  • DATABASE_URL - PostgreSQL connection string (Neon)
+  • NEXTAUTH_SECRET - JWT signing secret
+  • NEXTAUTH_URL - Application URL for NextAuth callbacks
+  • SMTP settings for Nodemailer (email service)
+  • UploadThing API keys
+
+NPM SCRIPTS:
+  npm run dev - Start development server (next dev)
+  npm run build - Production build (next build)
+  npm run start - Start production server (next start)
+  npm run lint - Run ESLint
+  npm run db:seed - Seed database with initial data
+
+PRISMA COMMANDS (used via npx):
+  npx prisma migrate dev --name <description>
+    Create and apply database migration
+  
+  npx prisma generate
+    Regenerate Prisma client after schema changes
+  
+  npx prisma studio
+    Open Prisma Studio (visual database editor)
+  
+  npm run db:seed
+    Run seed script (via tsx)
+
+
+================================================================================
+15. SECURITY & BEST PRACTICES
+================================================================================
+
+AUTHENTICATION:
+  • Email verification required before login
+  • Password hashing with bcryptjs
+  • JWT-based sessions
+  • NextAuth for secure auth handling
+  • NEXTAUTH_SECRET protects JWT signing
+
+DATABASE:
+  • SQL injection protection via Prisma parameterized queries
+  • Proper cascade delete rules
+  • User isolation (users can only access their own designs/orders)
+
+FILE UPLOADS:
+  • UploadThing integration for secure file handling
+  • File type validation and size limits
+
+TYPE SAFETY:
+  • TypeScript strict mode across entire project
+  • No any types allowed
+  • Prisma generates TypeScript-native client
+  • All model IDs are cuid() strings, never numbers
+
+ERROR HANDLING:
+  • Try/catch blocks around async operations
+  • Proper error logging
+  • No stack traces exposed to clients
+  • User-friendly error messages
+
+
+================================================================================
+16. TESTING & DEPLOYMENT
+================================================================================
+
+TESTING:
+  • No automated tests configured currently
+  • Manual testing via dev server
+
+DEPLOYMENT:
+  • Next.js production build (npm run build)
+  • Deployed to edge/serverless environment
+  • Environment variables configured per environment
+  • Database migrations run before deployment
+
+
+================================================================================
+17. DEVELOPMENT WORKFLOW
+================================================================================
+
+STARTING DEVELOPMENT:
+  1. npm install (restore dependencies)
+  2. Configure .env.local with database and auth secrets
+  3. npx prisma migrate dev (apply migrations)
+  4. npm run db:seed (populate database)
+  5. npm run dev (start development server)
+  6. Open http://localhost:3000
+
+CREATING NEW FEATURES:
+  1. Update Prisma schema if needed (prisma/schema.prisma)
+  2. Run npx prisma migrate dev --name <description>
+  3. Create components/hooks as needed
+  4. Use existing patterns from similar features
+  5. Test functionality in dev server
+
+DATABASE CHANGES:
+  1. Edit prisma/schema.prisma
+  2. Run npx prisma migrate dev --name <description> (creates migration)
+  3. Review generated migration file
+  4. Prisma client auto-regenerates
+  5. Apply migration to production via deployment
+
+
+================================================================================
+18. SUMMARY & KEY TAKEAWAYS
+================================================================================
+
+The White Laser is a modern, full-stack e-commerce platform with an integrated
+vector editor, built with:
+
+FRONTEND:
+  • Next.js 16 (App Router) + React 19 + TypeScript
+  • Tailwind CSS + shadcn/ui for consistent UI
+  • Custom Fabric.js hooks for canvas editing
+  • Zustand for state management
+
+BACKEND:
+  • NextAuth for authentication
+  • Prisma 7 ORM with PostgreSQL database
+  • API routes for backend services
+  • UploadThing for file management
+
+DATABASE:
+  • 8 models: User, Design, Product, Order, OrderItem, OrderCustomDesign,
+    VerificationToken, UploadedDesign
+  • Relationships designed for e-commerce and design management
+  • Snapshots stored for orders (productName, price at purchase time)
+
+KEY ARCHITECTURAL PATTERNS:
+  • Hook-based canvas functionality (separation of concerns)
+  • Zustand stores for persistent state
+  • API routes for backend operations
+  • shadcn/ui for UI consistency
+  • TypeScript strict mode for type safety
+  • Middleware for route protection
+
+The project follows modern React patterns, maintains clear separation of concerns,
+and provides a solid foundation for continued development and scaling.
+
+================================================================================
+                              END OF DOCUMENTATION
+================================================================================

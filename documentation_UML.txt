@@ -1,0 +1,1595 @@
+================================================================================
+                    THE WHITE LASER - UML DIAGRAMS DOCUMENTATION
+                         Complete Visual Architecture Guide
+================================================================================
+
+Generated: March 26, 2026
+
+This document provides UML diagrams in text format to visualize the system 
+architecture, data models, workflows, and interactions. These can be converted 
+to visual diagrams using tools like:
+  • Draw.io / Lucidchart (import PlantUML or draw manually)
+  • PlantUML, Mermaid.js
+  • StarUML, ArchiMate, or any UML tool
+
+
+================================================================================
+PART 1: CLASS DIAGRAM (Database Models & Relationships)
+================================================================================
+
+MERMAID CLASS DIAGRAM:
+
+```mermaid
+classDiagram
+    class User {
+        -String id
+        -String name
+        -String email
+        -DateTime emailVerified
+        -String password
+        -String image
+        -Role role
+        -DateTime createdAt
+        -DateTime updatedAt
+        +getDesigns()
+        +getOrders()
+    }
+
+    class Design {
+        -String id
+        -String userId
+        -String name
+        -String canvasJson
+        -DateTime createdAt
+        -DateTime updatedAt
+        +updateCanvas()
+        +delete()
+    }
+
+    class Product {
+        -String id
+        -String name
+        -String description
+        -Float price
+        -String imageUrl
+        -String category
+        -Boolean isCustomizable
+        -DateTime createdAt
+        -DateTime updatedAt
+        +getUploadedDesigns()
+        +getOrderItems()
+    }
+
+    class Order {
+        -String id
+        -String userId
+        -OrderStatus status
+        -Float total
+        -DateTime createdAt
+        -DateTime updatedAt
+        +addItem()
+        +removeItem()
+        +calculateTotal()
+    }
+
+    class OrderItem {
+        -String id
+        -String orderId
+        -String productId
+        -String productName
+        -Float price
+        -Int quantity
+        +getCustomDesign()
+    }
+
+    class OrderCustomDesign {
+        -String id
+        -String orderItemId
+        -String fileUrl
+        -String fileName
+        -DateTime createdAt
+    }
+
+    class UploadedDesign {
+        -String id
+        -String productId
+        -String fileUrl
+        -String fileName
+        -DateTime createdAt
+    }
+
+    class VerificationToken {
+        -String id
+        -String email
+        -String token
+        -DateTime expires
+        +isValid()
+        +isExpired()
+    }
+
+    class Role {
+        <<enum>>
+        USER
+        ADMIN
+    }
+
+    class OrderStatus {
+        <<enum>>
+        PENDING
+        PROCESSING
+        SHIPPED
+        DELIVERED
+        CANCELLED
+    }
+
+    %% Relationships
+    User "1" --> "*" Design : creates
+    User "1" --> "*" Order : places
+    Product "1" --> "*" UploadedDesign : has
+    Product "1" --> "*" OrderItem : appears_in
+    Order "1" --> "*" OrderItem : contains
+    OrderItem "1" --> "0..1" OrderCustomDesign : has
+    User --> Role : has
+    Order --> OrderStatus : has
+```
+
+TEXT REPRESENTATION:
+
+User
+├─ Attributes
+│  ├─ id: String (PK, cuid)
+│  ├─ name: String (optional)
+│  ├─ email: String (unique)
+│  ├─ emailVerified: DateTime (optional)
+│  ├─ password: String (hashed)
+│  ├─ image: String (optional)
+│  ├─ role: Role (USER | ADMIN)
+│  ├─ createdAt: DateTime
+│  └─ updatedAt: DateTime
+├─ Relationships
+│  ├─ 1:N → Design (owns many)
+│  └─ 1:N → Order (places many)
+└─ Operations
+   ├─ register(email, password)
+   ├─ login(email, password)
+   ├─ verifyEmail(token)
+   └─ logout()
+
+Design
+├─ Attributes
+│  ├─ id: String (PK, cuid)
+│  ├─ userId: String (FK)
+│  ├─ name: String
+│  ├─ canvasJson: String (Fabric.js snapshot)
+│  ├─ createdAt: DateTime
+│  └─ updatedAt: DateTime
+├─ Relationships
+│  └─ N:1 ← User (belongs to)
+└─ Operations
+   ├─ save()
+   ├─ load()
+   ├─ update(newJson)
+   └─ delete()
+
+Product
+├─ Attributes
+│  ├─ id: String (PK, cuid)
+│  ├─ name: String
+│  ├─ description: String (optional)
+│  ├─ price: Float
+│  ├─ imageUrl: String (optional)
+│  ├─ category: String
+│  ├─ isCustomizable: Boolean
+│  ├─ createdAt: DateTime
+│  └─ updatedAt: DateTime
+├─ Relationships
+│  ├─ 1:N → UploadedDesign (has many)
+│  └─ 1:N → OrderItem (appears in many)
+└─ Operations
+   ├─ getPrice()
+   ├─ getDetails()
+   ├─ setCustomizable(flag)
+   └─ updatePrice(newPrice)
+
+Order
+├─ Attributes
+│  ├─ id: String (PK, cuid)
+│  ├─ userId: String (FK, optional)
+│  ├─ status: OrderStatus (enum)
+│  ├─ total: Float
+│  ├─ createdAt: DateTime
+│  └─ updatedAt: DateTime
+├─ Relationships
+│  ├─ N:1 ← User (belongs to, nullable)
+│  └─ 1:N → OrderItem (contains many)
+└─ Operations
+   ├─ addItem(product, quantity)
+   ├─ removeItem(orderItemId)
+   ├─ calculateTotal()
+   ├─ setStatus(newStatus)
+   └─ complete()
+
+OrderItem
+├─ Attributes
+│  ├─ id: String (PK, cuid)
+│  ├─ orderId: String (FK)
+│  ├─ productId: String (FK)
+│  ├─ productName: String (snapshot)
+│  ├─ price: Float (snapshot at purchase)
+│  └─ quantity: Int
+├─ Relationships
+│  ├─ N:1 ← Order (belongs to)
+│  ├─ N:1 ← Product (references)
+│  └─ 1:1 → OrderCustomDesign (optional)
+└─ Operations
+   ├─ updateQuantity(qty)
+   └─ getCustomDesign()
+
+OrderCustomDesign
+├─ Attributes
+│  ├─ id: String (PK, cuid)
+│  ├─ orderItemId: String (FK, unique)
+│  ├─ fileUrl: String
+│  ├─ fileName: String
+│  └─ createdAt: DateTime
+├─ Relationships
+│  └─ 1:1 ← OrderItem (belongs to)
+└─ Operations
+   ├─ downloadFile()
+   └─ delete()
+
+UploadedDesign
+├─ Attributes
+│  ├─ id: String (PK, cuid)
+│  ├─ productId: String (FK)
+│  ├─ fileUrl: String
+│  ├─ fileName: String
+│  └─ createdAt: DateTime
+├─ Relationships
+│  └─ N:1 ← Product (belongs to)
+└─ Operations
+   ├─ loadOntoCanvas()
+   └─ delete()
+
+VerificationToken
+├─ Attributes
+│  ├─ id: String (PK, cuid)
+│  ├─ email: String
+│  ├─ token: String (unique)
+│  └─ expires: DateTime
+├─ Composite Key
+│  └─ (email, token)
+└─ Operations
+   ├─ validate(token)
+   ├─ isExpired()
+   └─ delete()
+
+
+================================================================================
+PART 2: ENTITY-RELATIONSHIP DIAGRAM (ER Diagram)
+================================================================================
+
+TEXT REPRESENTATION:
+
+┌──────────────────┐
+│      USER        │
+├──────────────────┤
+│ id (PK)          │
+│ name             │
+│ email (UNIQUE)   │
+│ emailVerified    │
+│ password (hashed)│
+│ image            │
+│ role             │
+│ createdAt        │
+│ updatedAt        │
+└──────────────────┘
+       │ 1
+       │ (1:N)
+       ├─────────────────┐
+       │                 │
+       │                 │
+   (creates)         (places)
+       │                 │
+       N                 N
+   ┌─────────────┐   ┌────────────┐
+   │   DESIGN    │   │   ORDER    │
+   ├─────────────┤   ├────────────┤
+   │ id (PK)     │   │ id (PK)    │
+   │ userId (FK) │   │ userId (FK)│ ← [nullable]
+   │ name        │   │ status     │
+   │ canvasJson  │   │ total      │
+   │ createdAt   │   │ createdAt  │
+   │ updatedAt   │   │ updatedAt  │
+   └─────────────┘   └────────────┘
+                             │ 1
+                             │ (1:N)
+                             │
+                         (contains)
+                             │
+                             N
+                      ┌──────────────┐
+                      │  ORDER_ITEM  │
+                      ├──────────────┤
+                      │ id (PK)      │
+                      │ orderId (FK) │
+                      │ productId(FK)│
+                      │ productName  │ ← snapshot
+                      │ price        │ ← snapshot
+                      │ quantity     │
+                      └──────────────┘
+                             │ 1
+                             │ (0..1:1)
+                             │
+                      (has design)
+                             │
+                             0..1
+                  ┌──────────────────────┐
+                  │ ORDER_CUSTOM_DESIGN  │
+                  ├──────────────────────┤
+                  │ id (PK)              │
+                  │ orderItemId (FK)     │
+                  │ fileUrl              │
+                  │ fileName             │
+                  │ createdAt            │
+                  └──────────────────────┘
+
+┌──────────────────┐
+│   PRODUCT        │
+├──────────────────┤
+│ id (PK)          │
+│ name             │
+│ description      │
+│ price            │
+│ imageUrl         │
+│ category         │
+│ isCustomizable   │
+│ createdAt        │
+│ updatedAt        │
+└──────────────────┘
+   │ 1              │ 1
+   ├─(1:N)──────────┼─(1:N)─────┐
+   │                │           │
+   │            (referenced_in) │
+   │                │        (appears_in)
+   N                N           N
+┌────────────────┐  │ 
+│ UPLOADED_DESIGN│  │
+├────────────────┤  │
+│ id (PK)        │  │
+│ productId (FK) │  │
+│ fileUrl        │  │
+│ fileName       │  │
+│ createdAt      │  │
+└────────────────┘  │
+                    └──→ [ORDER_ITEM]
+
+┌────────────────────────┐
+│ VERIFICATION_TOKEN     │
+├────────────────────────┤
+│ id (PK)                │
+│ email                  │
+│ token (UNIQUE)         │
+│ expires                │
+├────────────────────────┤
+│ Composite: (email, token)
+└────────────────────────┘
+
+
+================================================================================
+PART 3: SEQUENCE DIAGRAMS
+================================================================================
+
+3.1 USER REGISTRATION & EMAIL VERIFICATION FLOW
+═════════════════════════════════════════════════
+
+MERMAID SEQUENCE DIAGRAM:
+
+```mermaid
+sequenceDiagram
+    participant User as User Browser
+    participant App as Next.js App
+    participant API as API Route
+    participant DB as Database
+    participant Mail as Email Service
+
+    User->>App: Navigate to /auth/register
+    App-->>User: Show registration form
+
+    User->>User: Fill email, password, name
+    User->>API: POST /api/auth/register
+    
+    API->>API: Validate input
+    API->>API: Hash password with bcryptjs
+    
+    API->>DB: Create User (emailVerified=null)
+    DB-->>API: User created
+    
+    API->>DB: Create VerificationToken
+    DB-->>API: Token created
+    
+    API->>Mail: Send email with verification link
+    Mail-->>User: Email delivered
+    
+    API-->>User: { success: true, message: "Check your email" }
+
+    Note over User: User clicks email link
+    
+    User->>API: GET /api/auth/verify?token=xyz
+    API->>DB: Find VerificationToken by token
+    DB-->>API: Token found
+    
+    API->>API: Check if token expired
+    
+    API->>DB: Update User (emailVerified = now())
+    DB-->>API: User updated
+    
+    API->>DB: Delete VerificationToken
+    DB-->>API: Token deleted
+    
+    API-->>User: Redirect to /auth/login
+    App-->>User: Show login form
+```
+
+TEXT REPRESENTATION:
+
+REGISTRATION FLOW:
+  1. User visits /auth/register
+  2. User enters email, password, name
+  3. Browser sends POST /api/auth/register
+  4. API validates input and password strength
+  5. API hashes password with bcryptjs
+  6. API creates User record (emailVerified = null)
+  7. API creates VerificationToken with unique token
+  8. API sends email with verification link
+  9. User receives email with link
+  10. User clicks verification link
+  11. Link contains token in URL query param
+  12. Browser calls GET /api/auth/verify?token=xyz
+  13. API validates token (not expired, exists)
+  14. API sets User.emailVerified = now()
+  15. API deletes VerificationToken
+  16. User redirected to /auth/login
+  17. User can now login with email/password
+
+Key Actors:
+  • User: Web browser / client
+  • RegisterForm: React component
+  • API Route (@/app/api/auth/register + verify)
+  • Database: Prisma + PostgreSQL
+  • Email Service: Nodemailer
+
+
+3.2 USER LOGIN & SESSION CREATION FLOW
+═══════════════════════════════════════
+
+```mermaid
+sequenceDiagram
+    participant User as User Browser
+    participant App as Next.js App
+    participant NextAuth as NextAuth
+    participant Prisma as Prisma (DB)
+    participant JWT as JWT Engine
+
+    User->>App: Navigate to /auth/login
+    App-->>User: Show login form
+
+    User->>User: Enter email + password
+    User->>NextAuth: POST /api/auth/callback/credentials
+    
+    NextAuth->>Prisma: Find User by email
+    Prisma-->>NextAuth: User record
+    
+    alt User not found
+        NextAuth-->>User: Error: Invalid credentials
+    else User found
+        NextAuth->>NextAuth: Compare password hash
+        
+        alt Password incorrect
+            NextAuth-->>User: Error: Invalid credentials
+        else Password correct
+            alt emailVerified is null
+                NextAuth-->>User: Error: Email not verified
+            else Email verified
+                NextAuth->>JWT: Create JWT token
+                JWT-->>NextAuth: Token with id, email, role
+                
+                NextAuth->>Prisma: Update User (sessions)
+                Prisma-->>NextAuth: Session created
+                
+                NextAuth-->>User: Set cookie with JWT
+                NextAuth-->>User: Redirect to dashboard
+            end
+        end
+    end
+```
+
+TEXT REPRESENTATION:
+
+LOGIN FLOW:
+  1. User navigates to /auth/login
+  2. User enters email and password
+  3. Browser sends credentials to NextAuth callback
+  4. NextAuth queries User by email
+  5. If user not found → error
+  6. If user found, compare password hash
+  7. If password incorrect → error
+  8. If password correct, check emailVerified
+  9. If emailVerified is null → email not verified error
+  10. If email verified, create JWT token
+  11. JWT contains: id, email, role (from callbacks)
+  12. NextAuth creates session in database
+  13. NextAuth sets secure HTTP-only cookie
+  14. User redirected to authenticated page (dashboard)
+
+Key Actors:
+  • User: Web browser
+  • LoginForm: React component
+  • NextAuth: Authentication library
+  • Prisma: Database ORM
+  • JWT Engine: Token creation and signing
+
+
+3.3 DESIGN SAVE FLOW
+════════════════════
+
+```mermaid
+sequenceDiagram
+    participant User as User
+    participant Editor as Editor Page
+    participant Hook as useSave Hook
+    participant API as API Route
+    participant DB as Database
+    participant Zustand as Zustand Store
+
+    User->>Editor: Click "Save Design"
+    
+    Editor->>Hook: saveToDB()
+    
+    Hook->>Hook: Get canvas reference from store
+    Hook->>Hook: Call canvas.toJSON()
+    Hook-->>Hook: Get serialized canvas data
+    
+    Hook->>API: POST /api/designs
+    Note over API: Payload: { name, canvasJson }
+    
+    API->>API: Validate user session
+    
+    alt User not authenticated
+        API-->>Hook: { error: "Unauthorized" }
+    else User authenticated
+        API->>DB: Find Design by id or create new
+        DB-->>API: Design record
+        
+        API->>DB: Update Design with new canvasJson
+        DB-->>API: Updated Design
+        
+        API->>Zustand: Update editorStore with saved state
+        
+        API-->>Hook: { success: true, designId }
+        Hook-->>Editor: Show "Design saved" toast
+    end
+```
+
+TEXT REPRESENTATION:
+
+DESIGN SAVE FLOW:
+  1. User clicks "Save Design" button
+  2. Editor calls useSave hook
+  3. Hook gets canvas reference from editorStore
+  4. Hook serializes canvas with canvas.toJSON()
+  5. Hook sends POST /api/designs with canvasJson
+  6. API validates user session (JWT)
+  7. If not authenticated → unauthorized error
+  8. If authenticated, find existing Design or create new
+  9. API updates Design.canvasJson with new JSON
+  10. API updates Design.updatedAt timestamp
+  11. API returns designId and success status
+  12. Hook updates Zustand store
+  13. Editor shows "Design saved" toast notification
+
+Key Actors:
+  • User: Browser
+  • EditorCanvas: Main canvas component
+  • useSave: Custom hook
+  • API Route: /api/designs
+  • Database: Prisma + PostgreSQL
+  • Zustand: State management
+
+
+3.4 PRODUCT ORDERING FLOW
+═════════════════════════
+
+```mermaid
+sequenceDiagram
+    participant User as User
+    participant Shop as Product Page
+    participant Cart as Cart Store
+    participant Checkout as Checkout Flow
+    participant DB as Database
+    participant Payment as Payment Provider
+
+    User->>Shop: Browse products
+    User->>Shop: Click "Add to Cart"
+    
+    Shop->>Cart: addItem(productId, quantity)
+    Cart->>Cart: Check if item exists
+    
+    alt Item exists in cart
+        Cart->>Cart: Increment quantity
+    else New item
+        Cart->>Cart: Add new CartItem
+    end
+    
+    Cart-->>Shop: Item added
+    Shop-->>User: Show toast "Added to cart"
+    Cart->>Cart: Persist to localStorage
+    
+    User->>Cart: Click "Checkout"
+    Cart-->>Checkout: Show checkout summary
+    
+    User->>Checkout: Review order, enter details
+    User->>Checkout: Click "Place Order"
+    
+    Checkout->>DB: Create Order (PENDING status)
+    DB-->>Checkout: orderId
+    
+    loop For each cart item
+        Checkout->>DB: Create OrderItem
+        DB-->>Checkout: orderItemId
+    end
+    
+    Checkout->>Payment: Send payment request
+    Payment-->>Checkout: Payment processed/token
+    
+    alt Payment failed
+        Checkout->>DB: Update Order status: CANCELLED
+        Checkout-->>User: Error: Payment failed
+    else Payment successful
+        Checkout->>DB: Update Order status: PROCESSING
+        Checkout->>Cart: Clear cart items
+        Cart->>Cart: Clear localStorage
+        Checkout-->>User: Order confirmation page
+    end
+```
+
+TEXT REPRESENTATION:
+
+CART & ORDERING FLOW:
+  1. User browses product catalog
+  2. User clicks "Add to Cart" on product
+  3. Shop component calls cartStore.addItem()
+  4. If product already in cart, increment quantity
+  5. If new product, add to cart items array
+  6. Cart persists to localStorage (browser storage)
+  7. User navigates to cart
+  8. User reviews items and totals
+  9. User clicks "Checkout"
+  10. Checkout page shows order summary
+  11. User enters shipping/payment details
+  12. User clicks "Place Order"
+  13. Checkout creates Order record (status: PENDING)
+  14. For each cart item, creates OrderItem record
+  15. Sends payment request to payment provider
+  16. If payment fails → mark Order as CANCELLED, show error
+  17. If payment succeeds → mark Order as PROCESSING
+  18. Clear cart from localStorage
+  19. Show order confirmation page
+
+Key Actors:
+  • User: Shopping browser
+  • ProductCard: Product display component
+  • CartDrawer: Cart UI component
+  • CartStore: Zustand persistence store
+  • Checkout: Order creation flow
+  • Database: Order and OrderItem records
+  • Payment Provider: External payment service
+
+
+3.5 CANVAS EDITING FLOW (WITH UNDO/REDO)
+═════════════════════════════════════════
+
+```mermaid
+sequenceDiagram
+    participant User as User
+    participant Canvas as Fabric Canvas
+    participant Hook as useHistory/Hook
+    participant Store as Zustand Store
+
+    Note over User,Store: User draws/edits on canvas
+
+    User->>Canvas: Draw rectangle/text
+    Canvas->>Canvas: Add object to canvas
+    Canvas->>Hook: Emit object:added event
+    
+    Hook->>Hook: Serialize current canvas state
+    Hook->>Store: addHistorySnapshot(canvasJson)
+    
+    Store->>Store: Push snapshot to history array
+    Store->>Store: Limit to 50 snapshots (FIFO)
+    Store->>Store: Clear redo stack
+    
+    Hook-->>Canvas: Snapshot recorded
+
+    Note over User,Store: User clicks Undo
+
+    User->>Hook: undo()
+    
+    Hook->>Store: Get previous snapshot from history
+    Store-->>Hook: previousCanvasJson
+    
+    Hook->>Hook: Set isRestoringHistory = true
+    Hook->>Canvas: canvas.loadFromJSON(previousCanvasJson)
+    Canvas->>Canvas: Recreate objects from JSON
+    
+    Hook->>Hook: Set isRestoringHistory = false
+    Hook->>Store: Push current to redo stack
+    
+    Note over User,Store: User clicks Redo
+
+    User->>Hook: redo()
+    
+    Hook->>Store: Get next snapshot from redo stack
+    Store-->>Hook: nextCanvasJson
+    
+    Hook->>Hook: Set isRestoringHistory = true
+    Hook->>Canvas: canvas.loadFromJSON(nextCanvasJson)
+    
+    Hook->>Hook: Set isRestoringHistory = false
+```
+
+TEXT REPRESENTATION:
+
+CANVAS EDITING & HISTORY FLOW:
+  1. User performs action on canvas (draws, moves, edits)
+  2. Fabric.js emits event (object:added, object:modified)
+  3. useHistory hook catches event
+  4. Hook serializes canvas state with canvas.toJSON()
+  5. Hook calls editorStore.addHistorySnapshot()
+  6. Zustand appends snapshot to history array
+  7. If history exceeds 50 snapshots, remove oldest (FIFO)
+  8. Clear redo stack (new action clears forward history)
+  9. User can undo multiple times
+  10. Click "Undo" button
+  11. Hook gets previous snapshot from history
+  12. Hook sets isRestoringHistory = true
+  13. Hook calls canvas.loadFromJSON(previousJson)
+  14. Fabric recreates all objects from JSON
+  15. Hook sets isRestoringHistory = false
+  16. Previous state restored to redo stack
+  17. User can redo to go forward
+  18. Click "Redo" button
+  19. Hook gets next snapshot from redo stack
+  20. Repeat loading process
+
+Key Actors:
+  • User: Interacting with canvas UI
+  • Fabric.js Canvas: Drawing engine
+  • useHistory Hook: Manages undo/redo logic
+  • Zustand Store: Persists history snapshots
+  • isRestoringHistory Guard: Prevents recursive snapshots
+
+
+================================================================================
+PART 4: COMPONENT INTERACTION DIAGRAM
+================================================================================
+
+HIERARCHICAL COMPONENT STRUCTURE:
+
+RootLayout
+├── <Providers>
+│   ├── SessionProvider (NextAuth)
+│   ├── ThemeProvider (if added)
+│   └── CartProvider (Zustand context)
+│
+├── <SiteHeader>
+│   ├── Logo/Branding
+│   ├── Navigation Links
+│   │   ├─ Products
+│   │   ├─ Dashboard
+│   │   └─ Admin (if ADMIN role)
+│   ├── User Menu
+│   │   ├─ Profile
+│   │   ├─ Settings
+│   │   └─ Logout
+│   └── CartButton
+│       └── Displays item count
+│
+├── <CartDrawer>
+│   ├── Cart Items List
+│   │   └── Map CartItem components
+│   │       ├─ Product name
+│   │       ├─ Price
+│   │       ├─ Quantity controls
+│   │       └─ Remove button
+│   ├── Cart Summary
+│   │   ├─ Subtotal
+│   │   ├─ Tax
+│   │   ├─ Shipping
+│   │   └─ Total
+│   └── Checkout Button
+│
+└── <Page Content>
+    ├─ / (HomePage)
+    ├─ /produse (ProductCatalog)
+    │  ├── ProductFilters
+    │  └── ProductGrid
+    │      └── ProductCard[] (many)
+    │          ├─ Image
+    │          ├─ Name, Description
+    │          ├─ Price (formatted)
+    │          └─ "Customize" button → /editor
+    │
+    ├─ /editor (EditorPage)
+    │  └── EditorLayout
+    │      ├── Toolbar
+    │      │   ├─ File ops (Save, Load)
+    │      │   ├─ Edit ops (Undo, Redo)
+    │      │   ├─ Tool buttons
+    │      │   │  ├─ Select
+    │      │   │  ├─ Rectangle
+    │      │   │  ├─ Ellipse
+    │      │   │  ├─ Line
+    │      │   │  ├─ Text
+    │      │   │  ├─ Image
+    │      │   │  ├─ Pan
+    │      │   │  └─ Draw
+    │      │   ├─ View controls
+    │      │   │  ├─ Zoom in/out
+    │      │   │  ├─ Fit to view
+    │      │   │  └─ 100%
+    │      │   └─ Export
+    │      │
+    │      ├── EditorCanvas (main)
+    │      │   └── <canvas> (Fabric.js attached)
+    │      │
+    │      └── PropertiesBar
+    │          ├── Object Properties
+    │          │   ├─ Fill color
+    │          │   ├─ Stroke color
+    │          │   ├─ Stroke width
+    │          │   ├─ Opacity
+    │          │   └─ Rotation
+    │          ├── Alignment Panel
+    │          │   ├─ Align left/center/right
+    │          │   ├─ Align top/middle/bottom
+    │          │   └─ Distribute
+    │          └── Grouping
+    │              ├─ Group button
+    │              └─ Ungroup button
+    │
+    ├─ /auth/login (LoginPage)
+    │  └── LoginForm
+    │      ├─ Email input
+    │      ├─ Password input
+    │      ├─ "Sign In" button
+    │      └─ "Register" link
+    │
+    ├─ /auth/register (RegisterPage)
+    │  └── RegisterForm
+    │      ├─ Name input
+    │      ├─ Email input
+    │      ├─ Password input
+    │      ├─ Confirm password
+    │      ├─ "Register" button
+    │      └─ "Login" link
+    │
+    └─ /admin (AdminLayout)
+       ├── AdminProductsPage
+       │  ├── ProductTable
+       │  ├── AddProductModal
+       │  │   ├─ Name input
+       │  │   ├─ Description
+       │  │   ├─ Price
+       │  │   ├─ Category select
+       │  │   ├─ Image upload
+       │  │   ├─ Customizable toggle
+       │  │   └─ "Save Product" button
+       │  └── Actions (Edit, Delete)
+       │
+       └── AdminOrdersPage
+           ├── OrderTable
+           └── OrderDetailsSheet
+               ├─ Order info
+               ├─ Items list
+               ├─ Status selector
+               └─ Timestamps
+
+
+================================================================================
+PART 5: USE CASE DIAGRAM
+================================================================================
+
+MERMAID USE CASE DIAGRAM:
+
+```mermaid
+graph TB
+    subgraph "Authentication System"
+        RegisterUC["Register Account"]
+        VerifyEmailUC["Verify Email"]
+        LoginUC["Login"]
+        LogoutUC["Logout"]
+    end
+
+    subgraph "Product Management"
+        BrowseUC["Browse Products"]
+        FilterUC["Filter by Category"]
+        ViewDetailsUC["View Product Details"]
+    end
+
+    subgraph "Vector Editor"
+        DrawObjectsUC["Draw Shapes/Text"]
+        EditObjectsUC["Edit Objects"]
+        AlignUC["Align Objects"]
+        GroupUC["Group Objects"]
+        UndoRedoUC["Undo/Redo"]
+        SaveDesignUC["Save Design"]
+        LoadDesignUC["Load Design"]
+        ExportUC["Export Design"]
+    end
+
+    subgraph "Shopping"
+        AddToCartUC["Add to Cart"]
+        ViewCartUC["View Cart"]
+        CheckoutUC["Checkout"]
+        PlaceOrderUC["Place Order"]
+    end
+
+    subgraph "Admin Features"
+        ManageProductsUC["Manage Products"]
+        AddProductUC["Add Product"]
+        DeleteProductUC["Delete Product"]
+        ManageOrdersUC["Manage Orders"]
+        UpdateOrderStatusUC["Update Order Status"]
+    end
+
+    User["User"]
+    Customer["Customer"]
+    Admin["Admin"]
+
+    User -->|can| RegisterUC
+    User -->|can| VerifyEmailUC
+    User -->|can| LoginUC
+    User -->|can| LogoutUC
+
+    Customer -->|can| BrowseUC
+    Customer -->|can| ViewDetailsUC
+    Customer -->|can| FilterUC
+    Customer -->|can| DrawObjectsUC
+    Customer -->|can| EditObjectsUC
+    Customer -->|can| AlignUC
+    Customer -->|can| GroupUC
+    Customer -->|can| UndoRedoUC
+    Customer -->|can| SaveDesignUC
+    Customer -->|can| LoadDesignUC
+    Customer -->|can| ExportUC
+    Customer -->|can| AddToCartUC
+    Customer -->|can| ViewCartUC
+    Customer -->|can| CheckoutUC
+    Customer -->|can| PlaceOrderUC
+
+    Admin -->|can| ManageProductsUC
+    Admin -->|can| AddProductUC
+    Admin -->|can| DeleteProductUC
+    Admin -->|can| ManageOrdersUC
+    Admin -->|can| UpdateOrderStatusUC
+    Admin -->|can| BrowseUC
+    Admin -->|can| LoginUC
+    Admin -->|can| LogoutUC
+
+    Customer --|is-a| User
+    Admin --|is-a| User
+```
+
+TEXT REPRESENTATION:
+
+USE CASES BY ACTOR:
+
+┌─────────────────────────────────────────────────────────────┐
+│                        SYSTEM ACTORS                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  User (Parent)                                            │
+│  ├─ Can register account                                  │
+│  ├─ Can verify email                                      │
+│  ├─ Can login                                             │
+│  └─ Can logout                                            │
+│                                                            │
+│  Customer (extends User)                                  │
+│  ├─ Can browse products                                   │
+│  ├─ Can filter products by category                      │
+│  ├─ Can view product details                             │
+│  ├─ Can draw shapes/text on canvas                       │
+│  ├─ Can edit objects (move, resize, rotate)             │
+│  ├─ Can align objects                                    │
+│  ├─ Can group/ungroup objects                           │
+│  ├─ Can undo/redo actions                               │
+│  ├─ Can save designs to database                        │
+│  ├─ Can load saved designs                              │
+│  ├─ Can export designs to PNG/SVG                       │
+│  ├─ Can add products to cart                            │
+│  ├─ Can view shopping cart                              │
+│  ├─ Can checkout                                        │
+│  └─ Can place order                                     │
+│                                                            │
+│  Admin (extends User)                                    │
+│  ├─ Can manage products                                 │
+│  ├─ Can add new products                               │
+│  ├─ Can edit product details                           │
+│  ├─ Can delete products                                │
+│  ├─ Can manage orders                                  │
+│  ├─ Can view order details                             │
+│  ├─ Can update order status                            │
+│  ├─ Can browse products                                │
+│  ├─ Can login/logout                                   │
+│  └─ Can view reports/analytics                         │
+│                                                            │
+└─────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+PART 6: ACTIVITY DIAGRAMS
+================================================================================
+
+6.1 REGISTRATION ACTIVITY FLOW
+══════════════════════════════
+
+Start
+  │
+  ▼
+[Display Registration Form]
+  │
+  ▼
+User fills form (email, password, name)
+  │
+  ▼
+[Submit Form] POST /api/auth/register
+  │
+  ├─────────────────────────────────────┐
+  │                                     │
+  ▼                                     ▼
+Validate Input            Validation Failed
+  │                          │
+  NO                         ▼
+  │                      [Show Error]
+  │                          │
+  │                          ▼
+  │                      [Stay on Form]
+  │
+  YES
+  │
+  ▼
+Hash password with bcryptjs
+  │
+  ▼
+Create User (emailVerified = null)
+  │
+  ▼
+Create VerificationToken
+  │
+  ▼
+Generate unique token
+  │
+  ▼
+Send email with verification link
+  │
+  ├─────────────────────────────────────┐
+  │                                     │
+  ▼                                     ▼
+Email Sent Success        Email Send Failed
+  │                          │
+  ▼                          ▼
+[Show Success Page]      [Show Error]
+  │                          │
+  ▼                          ▼
+[Redirect to Login]      [Redirect to Registration]
+  │
+  ▼
+User receives email
+  │
+  ▼
+User clicks verification link
+  │
+  ▼
+[Verification Page] GET /api/auth/verify?token=xyz
+  │
+  ├──────────────────────────────────────┐
+  │                                      │
+  ▼                                      ▼
+Token Valid & Not Expired    Token Invalid or Expired
+  │                              │
+  ▼                              ▼
+Update User (emailVerified)  [Show Error]
+  │                              │
+  ▼                              ▼
+Delete VerificationToken     [Send New Email?]
+  │                              │
+  ▼                              ▼
+[Success Page]               [Back to Register]
+  │
+  ▼
+End - Redirect to Login
+
+
+6.2 PRODUCT ORDERING ACTIVITY FLOW
+═══════════════════════════════════
+
+Start
+  │
+  ▼
+[Browse Products Catalog]
+  │
+  ▼
+User clicks "Add to Cart"
+  │
+  ▼
+[Add to Cart Action]
+  │
+  ├─────────────────────────────┐
+  │                             │
+  ▼                             ▼
+Item Already in Cart    New Item
+  │                        │
+  ▼                        ▼
+Increment Quantity   Add to Cart Array
+  │                        │
+  └────────────┬───────────┘
+               │
+               ▼
+        [Persist to localStorage]
+               │
+               ▼
+        Show "Added to Cart" Toast
+               │
+               ▼
+User clicks "Checkout"
+               │
+               ▼
+[Load Cart Summary]
+               │
+               ▼
+User reviews items and pricing
+               │
+               ▼
+User enters shipping address
+               │
+               ▼
+User selects payment method
+               │
+               ▼
+User clicks "Place Order"
+               │
+               ▼
+[Create Order Record] (status: PENDING)
+               │
+               ▼
+[Create OrderItem Records] (for each item)
+               │
+               ▼
+[Process Payment]
+               │
+        ├──────┴────────┐
+        │               │
+        ▼               ▼
+   Payment       Payment
+   Successful    Failed
+        │               │
+        ▼               ▼
+   Update Order    [Show Error]
+   status:             │
+   PROCESSING      Offer Retry?
+        │          ├─────────┐
+        ▼          │         │
+   [Clear Cart]    YES       NO
+        │          │         │
+        ▼          ▼         ▼
+   [Remove from    Retry   [Cancel Order]
+   localStorage]   │       │
+        │          │       ▼
+        ▼          │       End
+   [Show Confirmation]
+        │
+        ▼
+   End
+
+
+================================================================================
+PART 7: DEPLOYMENT & ARCHITECTURE DIAGRAM
+================================================================================
+
+SYSTEM ARCHITECTURE (High Level):
+
+┌──────────────────────────────────────────────────────────────────┐
+│                    CLOUD DEPLOYMENT ARCHITECTURE                  │
+└──────────────────────────────────────────────────────────────────┘
+
+                          ┌─────────────────┐
+                          │   End Users     │
+                          │   (Browsers)    │
+                          └────────┬────────┘
+                                   │ HTTPS
+                                   │
+                        ┌──────────▼──────────┐
+                        │   Vercel/Edge       │
+                        │   (Next.js Runtime) │
+                        └────────┬────────────┘
+                                 │
+                ┌────────────────┼────────────────┐
+                │                │                │
+        ┌───────▼────────┐  ┌────▼────────┐  ┌──▼──────────┐
+        │  Next.js Pages │  │  API Routes │  │  Middleware │
+        │  & Components  │  │  & Handlers │  │   (Auth)    │
+        └───────────────┘  └─────────────┘  └─────────────┘
+                │                │                │
+                └────────────────┼────────────────┘
+                                 │
+                        ┌────────▼────────┐
+                        │  Authentication │
+                        │    (NextAuth)   │
+                        └────────┬────────┘
+                                 │
+                        ┌────────▼────────┐
+                        │  ORM: Prisma 7  │
+                        │  Client Layer   │
+                        └────────┬────────┘
+                                 │
+                        ┌────────▼────────────────┐
+                        │  Neon PostgreSQL       │
+                        │  (Serverless Database) │
+                        └────────────────────────┘
+
+EXTERNAL SERVICES:
+
+┌──────────────────────┐
+│  Email Service       │
+│  (Nodemailer/SMTP)   │
+├──────────────────────┤
+│ • Email verification │
+│ • Order confirmations│
+└──────────────────────┘
+
+┌──────────────────────┐
+│  File Upload Service │
+│  (UploadThing)       │
+├──────────────────────┤
+│ • Design uploads     │
+│ • Product images     │
+└──────────────────────┘
+
+BROWSER-SIDE STATE:
+
+┌──────────────────────────────────────────┐
+│          Client-Side Storage              │
+├──────────────────────────────────────────┤
+│ • localStorage                            │
+│   ├─ Cart items (white-laser-cart)       │
+│   └─ User preferences                    │
+│ • Session Cookie (JWT from NextAuth)    │
+└──────────────────────────────────────────┘
+
+ZUSTAND STORES (In-Memory):
+
+┌──────────────────────────────────────────┐
+│        Client State (Zustand)             │
+├──────────────────────────────────────────┤
+│ • editorStore                            │
+│   ├─ canvas reference                    │
+│   ├─ selectedObjects                     │
+│   ├─ zoom level                          │
+│   ├─ activeTool                          │
+│   └─ history/redo stacks                 │
+│ • cartStore                              │
+│   ├─ items[]                             │
+│   ├─ total                               │
+│   └─ persist middleware                  │
+└──────────────────────────────────────────┘
+
+
+================================================================================
+PART 8: STATE MACHINE DIAGRAMS
+================================================================================
+
+8.1 USER AUTHENTICATION STATE MACHINE
+══════════════════════════════════════
+
+         ┌─────────────────┐
+         │  Not Registered │
+         └────────┬────────┘
+                  │
+                  │ Register + Verify Email
+                  │
+    ┌─────────────▼──────────────┐
+    │  Email Verification Pending │
+    └─────────────┬──────────────┘
+                  │
+                  │ User clicks link / Token verified
+                  │
+    ┌─────────────▼───────────────┐
+    │   Email Verified (Ready)    │
+    └─────────────┬───────────────┘
+                  │
+                  │ Login with email/password
+                  │
+    ┌─────────────▼─────────────┐
+    │    Authenticated (Session) │
+    └─────────────┬─────────────┘
+                  │
+                  │ Logout
+                  │
+         ┌────────▼────────┐
+         │ Unauthenticated │
+         └─────────────────┘
+
+
+8.2 ORDER STATUS STATE MACHINE
+═══════════════════════════════
+
+Initial: PENDING
+         │
+         ├─ Payment fails → CANCELLED ───────────────┐
+         │                                           │
+         ├─ Payment succeeds →                       │
+         │                    PROCESSING             │
+         │                         │                 │
+         │                         ├─ Packing        │
+         │                         │    │             │
+         │                         ▼    │             │
+         │                    SHIPPED ◄─┘             │
+         │                         │                 │
+         │                         ├─ Delivery       │
+         │                         │    │             │
+         │                         ▼    │             │
+         │                    DELIVERED ◄─┘           │
+         │                                           │
+         └───────────────────────────────────────────┘
+
+
+8.3 EDITOR TOOL STATE MACHINE
+══════════════════════════════
+
+       ┌──────────────┐
+       │   IDLE       │
+       └──────┬───────┘
+              │
+        ┌─────┼─────┬─────┬─────┬─────┐
+        │     │     │     │     │     │
+    ┌───▼─┐ ┌──▼─┐┌──▼──┐┌──▼──┐    │
+    │Select│ │Rect││Line ││Text │ ...│
+    └───┬──┘ └──┬─┘└──┬──┘└──┬──┘    │
+        │      │      │      │      │
+        │      │      │      │      │
+        └──────┴──────┴──────┴──────┘
+               │
+               ▼
+          ┌────────┐
+          │ Object │
+          │Created │
+          └────────┘
+
+
+================================================================================
+PART 9: DATA FLOW DIAGRAM (DFD)
+================================================================================
+
+LEVEL 0 DFD (High-Level Context):
+
+                    ┌─────────────┐
+                    │    User     │
+                    └──────┬──────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        │                  │                  │
+    Browse          Customize          Manage
+    Products        Designs            Orders
+        │                  │                  │
+        ▼                  ▼                  ▼
+┌──────────────┐   ┌──────────────┐   ┌──────────────┐
+│   The White  │   │   The White  │   │   The White  │
+│   Laser      │   │   Laser      │   │   Laser      │
+│   Shopping   │   │   Editor     │   │   Admin      │
+│   System     │   │   System     │   │   System     │
+└──────┬───────┘   └──────┬───────┘   └──────┬───────┘
+       │                  │                  │
+       └──────────────────┼──────────────────┘
+                          │
+                   ┌──────▼──────┐
+                   │  Database   │
+                   │ (PostgreSQL)│
+                   └─────────────┘
+
+LEVEL 1 DFD (Main Processes):
+
+User Input
+    │
+    ├─► P1: Authentication
+    │   ├─ Register
+    │   ├─ Email Verify
+    │   └─ Login
+    │   Output: Session/JWT
+    │
+    ├─► P2: Product Management
+    │   ├─ Browse Catalog
+    │   ├─ Filter Products
+    │   └─ View Details
+    │   Output: Products + Images
+    │
+    ├─► P3: Vector Editing
+    │   ├─ Draw Objects
+    │   ├─ Edit Objects
+    │   ├─ Undo/Redo
+    │   └─ Save Design
+    │   Output: Design JSON to DB
+    │
+    ├─► P4: Shopping Cart
+    │   ├─ Add Items
+    │   ├─ Update Quantities
+    │   └─ Remove Items
+    │   Output: Cart persisted to localStorage
+    │
+    ├─► P5: Order Processing
+    │   ├─ Create Order
+    │   ├─ Create OrderItems
+    │   ├─ Process Payment
+    │   └─ Update Order Status
+    │   Output: Order record in DB
+    │
+    └─► P6: Admin Management
+        ├─ Create Product
+        ├─ Update Product
+        ├─ Delete Product
+        └─ Manage Orders
+        Output: Product/Order records in DB
+
+All processes → Database (PostgreSQL)
+
+
+================================================================================
+PART 10: HOW TO VISUALIZE THESE DIAGRAMS
+================================================================================
+
+TOOLS & PLATFORMS:
+
+1. Mermaid.js (FREE, Open Source)
+   • Online: https://mermaid.live
+   • VS Code Extension: Mermaid Editor
+   • Idea: Copy Mermaid code blocks and paste into mermaid.live
+   
+   Supported Diagrams:
+   ✓ Class diagrams
+   ✓ Sequence diagrams
+   ✓ State machine diagrams
+   ✓ Use case diagrams
+   ✓ Flowcharts
+   ✓ ER diagrams
+
+2. PlantUML (FREE, Open Source)
+   • Online: http://www.plantuml.com/plantuml/uml/
+   • VS Code Extension: PlantUML
+   • Download and run locally
+   
+   Supported Diagrams:
+   ✓ Class diagrams
+   ✓ Sequence diagrams
+   ✓ Use case diagrams
+   ✓ Component diagrams
+   ✓ State machine diagrams
+   ✓ ER diagrams
+
+3. Draw.io (FREE, Open Source)
+   • Online: https://draw.io
+   • Desktop app available
+   • Can import/export multiple formats
+   
+   Supported Diagrams:
+   ✓ All UML diagrams
+   ✓ Manual drawing
+   ✓ Supports PlantUML/Mermaid import
+
+4. Lucidchart (PAID, Free tier available)
+   • https://www.lucidchart.com
+   • Professional UML tools
+   • Collaborative editing
+   • Team sharing
+
+5. StarUML (PAID, Personal Edition FREE)
+   • https://staruml.io
+   • Professional UML modeling
+   • Code generation from diagrams
+
+CONVERTING TO VISUAL DIAGRAMS:
+
+Step 1: Choose tool (recommended: Mermaid for free option)
+Step 2: Copy relevant code blocks from this file
+Step 3: Paste into tool's editor
+Step 4: Tool will render visual diagram
+Step 5: Export as PNG/SVG/PDF as needed
+
+Example - Using Mermaid Live:
+  1. Go to https://mermaid.live
+  2. Clear default code
+  3. Paste a Mermaid diagram code block from this file
+  4. See visual diagram instantly
+  5. Adjust and refine as needed
+  6. Export or share diagram link
+
+
+================================================================================
+PART 11: QUICK REFERENCE - DIAGRAM TYPES & USE CASES
+================================================================================
+
+DIAGRAM TYPE          | USE CASE                          | LOCATION
+─────────────────────┼──────────────────────────────────┼──────────────
+Class Diagram        | Data models & relationships      | Part 1
+ER Diagram          | Database schema visualization     | Part 2
+Sequence Diagram    | Step-by-step process flows       | Part 3
+Use Case Diagram    | System features & actors          | Part 5
+Activity Diagram    | Workflow & decision points        | Part 6
+Component Diagram   | System architecture               | Part 7
+State Machine       | State transitions                  | Part 8
+Data Flow Diagram   | Data movement between processes   | Part 9
+
+
+================================================================================
+PART 12: DIAGRAM CUSTOMIZATION TIPS
+================================================================================
+
+WHEN ADDING NEW FEATURES:
+
+1. Update Class Diagram (Part 1)
+   • Add new model classes
+   • Define relationships
+   • Add new methods
+
+2. Update ER Diagram (Part 2)
+   • Add new entities/tables
+   • Add foreign keys
+   • Show new relationships
+
+3. Update Sequence Diagrams (Part 3)
+   • Add new interaction flows
+   • Document API calls
+   • Show error paths
+
+4. Update Use Cases (Part 5)
+   • Add new use cases
+   • Map to actors
+   • Update actors if needed
+
+5. Update Activity Diagrams (Part 6)
+   • Add new process steps
+   • Add decision points
+   • Refine logic flows
+
+6. Update DFD (Part 9)
+   • Add new processes
+   • Show data stores
+   • Update data flows
+
+
+================================================================================
+                              SUMMARY
+================================================================================
+
+This UML documentation provides 12 different diagram types covering:
+
+✓ Data modeling (Class, ER diagrams)
+✓ Process flows (Sequence, Activity, DFD)
+✓ System architecture (Component, deployment)
+✓ Feature scoping (Use cases)
+✓ State management (State machines)
+
+All diagrams are in text/Mermaid format and can be visualized using free tools
+like Mermaid.live or Draw.io.
+
+Use these diagrams to:
+• Understand system architecture
+• Document existing features
+• Plan new features
+• Communicate with team members
+• Create technical documentation
+• Design database schema changes
+• Debug complex workflows
+
+================================================================================
+                              END OF UML DOCUMENTATION
+================================================================================

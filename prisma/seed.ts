@@ -1,4 +1,5 @@
 import "dotenv/config";
+import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../lib/generated/prisma/client.ts";
 
@@ -7,6 +8,20 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log("Seeding database...");
+
+  // Upsert admin user
+  await prisma.user.upsert({
+    where: { email: "thewhitelaser20@gmail.com" },
+    update: { role: "ADMIN" },
+    create: {
+      email: "thewhitelaser20@gmail.com",
+      name: "Admin",
+      password: await bcrypt.hash("Admin@WhiteLaser2025!", 10),
+      emailVerified: new Date(),
+      role: "ADMIN",
+    },
+  });
+  console.log("Admin user upserted: thewhitelaser20@gmail.com");
 
   // Clear existing products
   await prisma.product.deleteMany();

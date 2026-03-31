@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Minus, Plus, Trash2, ShoppingBag, Paperclip } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import {
@@ -17,6 +18,7 @@ function formatPrice(price: number): string {
 }
 
 export function CartDrawer() {
+  const router = useRouter();
   const { items, isOpen, closeCart, removeItem, updateQuantity, totalItems, totalPrice } =
     useCartStore();
 
@@ -149,7 +151,13 @@ export function CartDrawer() {
               <span>Total</span>
               <span>{formatPrice(totalPrice())}</span>
             </div>
-            <Button className="w-full bg-slate-900 hover:bg-slate-700 mt-1">
+            <Button
+              className="w-full bg-slate-900 hover:bg-slate-700 mt-1"
+              onClick={() => {
+                closeCart();
+                router.push("/checkout");
+              }}
+            >
               Finalizează comanda
             </Button>
             <Button variant="ghost" size="sm" className="w-full text-slate-500" onClick={closeCart}>
