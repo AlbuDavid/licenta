@@ -10,6 +10,7 @@ import { parseDXFtoFabric }                 from './utils/dxf';
 import {
   loadSVGOntoCanvas, fabricImageFromURL, fabricLoadJSON,
   sendToBack, bringToFront, sendBackwards, bringForward, cloneObject,
+  getScenePoint,
 } from './utils/fabric-compat';
 import { doAlign, type AlignType } from './utils/align';
 
@@ -92,7 +93,7 @@ export default function SvgCanvas({
   // ── Material preview ─────────────────────────────────────────────────────────
   const [material, setMaterial] = useState<MaterialMode>('none');
   const [preview,  setPreview]  = useState(false);
-  const savedColors = useRef<Map<fabric.Object, { fill: any; stroke: any }>>(new Map());
+  const savedColors = useRef<Map<fabric.Object, { fill: unknown; stroke: unknown }>>(new Map());
 
   // Update material overlay size whenever canvas resizes
   const updateMatOverlay = useCallback((mat: MaterialMode) => {
@@ -137,7 +138,7 @@ export default function SvgCanvas({
 
     // Save current colors & apply preview strokes
     c.getObjects().forEach(o => {
-      savedColors.current.set(o, { fill: (o as any).fill, stroke: (o as any).stroke });
+      savedColors.current.set(o, { fill: o.fill, stroke: o.stroke });
       const strokeColor = mat === 'slate' ? '#9CA3AF' : '#3B1A08';
       o.set({ fill: 'transparent', stroke: strokeColor });
     });
@@ -252,11 +253,11 @@ export default function SvgCanvas({
   }, [preview, material, applyPreview, onSave]);
 
   // ── Apply text property ────────────────────────────────────────────────────────
-  const applyText = useCallback((prop: string, val: any) => {
+  const applyText = useCallback((prop: string, val: string | number | boolean) => {
     const c = fcRef.current; if (!c) return;
     const o = c.getActiveObject();
     if (o && (o.type === 'i-text' || o.type === 'text')) {
-      (o as any).set(prop, val); c.requestRenderAll();
+      (o as fabric.IText).set(prop, val); c.requestRenderAll();
     }
   }, []);
 
@@ -329,8 +330,7 @@ export default function SvgCanvas({
       cvH.current = height;
       const c = fcRef.current;
       if (c) {
-        c.setWidth(width);
-        c.setHeight(height);
+        c.setDimensions({ width, height });
         c.requestRenderAll();
       }
       if (gridEl.current) {
@@ -400,9 +400,7 @@ export default function SvgCanvas({
     const onMove = (opt: any) => {
       const ptr = opt.e;
       // Get scene point (Fabric v6: getScenePoint, v5: getPointer)
-      const p = (fc as any).getScenePoint
-        ? (fc as any).getScenePoint(ptr)
-        : (fc as any).getPointer(ptr);
+      const p = getScenePoint(fc, ptr);
       setCur({ x: +(p.x / 10).toFixed(1), y: +(p.y / 10).toFixed(1) });
 
       if (panning.current || midPanning.current) {
@@ -452,9 +450,7 @@ export default function SvgCanvas({
       if (opt.target) return;  // clicked on object → don't draw
 
       // ── Drawing tools ──
-      const p = (fc as any).getScenePoint
-        ? (fc as any).getScenePoint(opt.e)
-        : (fc as any).getPointer(opt.e);
+      const p = getScenePoint(fc, opt.e);
 
       if (t === 'text') {
         const txt = new fabric.IText('Text', { left: p.x, top: p.y, fontFamily: 'Arial', fontSize: 20, fill: '#000' });
@@ -619,7 +615,7 @@ export default function SvgCanvas({
         if (e.key === 'd') {
           e.preventDefault();
           const a = fc.getActiveObject(); if (!a) return;
-          cloneObject(a).then((cloned: any) => {
+          cloneObject(a).then((cloned) => {
             cloned.set({ left: (a.left ?? 0) + 20, top: (a.top ?? 0) + 20 });
             fc.add(cloned); fc.setActiveObject(cloned); fc.requestRenderAll(); saveHist();
           });

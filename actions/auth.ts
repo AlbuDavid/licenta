@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/db";
 import { sendVerificationEmail } from "@/lib/mail";
+import { rateLimit } from "@/lib/rate-limit";
 
 interface RegisterInput {
   name: string;
@@ -19,8 +20,30 @@ interface ActionResult {
 // Prisma error codes we care about
 const PRISMA_UNIQUE_VIOLATION = "P2002";
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function registerUser(input: RegisterInput): Promise<ActionResult> {
   const { name, email, password } = input;
+
+  // Rate limit: 5 registration attempts per email per 15 minutes
+  const rl = rateLimit(`register:${email}`, { maxRequests: 5, windowMs: 15 * 60 * 1000 });
+  if (!rl.allowed) {
+    return { success: false, error: "Prea multe încercări. Reîncearcă mai târziu." };
+  }
+
+  // Server-side input validation
+  if (!name || name.trim().length < 2 || name.trim().length > 100) {
+    return { success: false, error: "Numele trebuie să aibă între 2 și 100 de caractere." };
+  }
+  if (!email || !EMAIL_REGEX.test(email)) {
+    return { success: false, error: "Adresa de email nu este validă." };
+  }
+  if (!password || password.length < 8) {
+    return { success: false, error: "Parola trebuie să aibă cel puțin 8 caractere." };
+  }
+  if (password.length > 128) {
+    return { success: false, error: "Parola nu poate depăși 128 de caractere." };
+  }
 
   let userId: string | null = null;
 

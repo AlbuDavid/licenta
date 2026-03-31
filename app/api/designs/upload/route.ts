@@ -1,5 +1,7 @@
 /* app/api/designs/upload/route.ts */
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
 import { randomUUID } from "crypto";
 import path from "path";
@@ -15,6 +17,10 @@ const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
+    }
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
 

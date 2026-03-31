@@ -5,10 +5,20 @@ import * as fabric from 'fabric';
 import { CV_W, CV_H } from '../editor.config';
 
 // ── Generic method-name fallback ──────────────────────────────────────────────
-export function tryMethod(obj: any, methods: string[], ...args: any[]): void {
+export function tryMethod(obj: object, methods: string[], ...args: unknown[]): void {
+  const record = obj as Record<string, unknown>;
   for (const m of methods) {
-    if (typeof obj[m] === 'function') { obj[m](...args); return; }
+    if (typeof record[m] === 'function') { (record[m] as (...a: unknown[]) => void)(...args); return; }
   }
+}
+
+// ── Scene-point helper (v5 getPointer / v6+ getScenePoint) ───────────────────
+export function getScenePoint(canvas: fabric.Canvas, e: MouseEvent): fabric.Point {
+  const c = canvas as unknown as Record<string, unknown>;
+  if (typeof c.getScenePoint === 'function') {
+    return (c.getScenePoint as (e: MouseEvent) => fabric.Point)(e);
+  }
+  return (c.getPointer as (e: MouseEvent) => fabric.Point)(e);
 }
 
 // ── Image from URL (v5 callback / v6 promise) ─────────────────────────────────
@@ -84,7 +94,7 @@ export async function loadSVGOntoCanvas(
   const z   = canvas.getZoom();
   const vpt = canvas.viewportTransform!;
 
-  const place = (objects: fabric.Object[], options: any) => {
+  const place = (objects: fabric.Object[], options: Record<string, unknown>) => {
     if (!objects?.length) { alert('SVG-ul pare gol sau incompatibil.'); return; }
     const valid = objects.filter(Boolean);
 
@@ -142,7 +152,7 @@ export async function loadSVGOntoCanvas(
   } catch {
     // fabric v5 callback fallback
     await new Promise<void>(res => {
-      (fabric as any).loadSVGFromString(svgString, (o: fabric.Object[], opts: any) => {
+      (fabric as any).loadSVGFromString(svgString, (o: fabric.Object[], opts: Record<string, unknown>) => {
         place(o, opts);
         res();
       });

@@ -18,6 +18,19 @@ enum Role {
   ADMIN
 }
 
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH_ON_DELIVERY
+  CARD
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -29,7 +42,27 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  designs Design[]
+  designs  Design[]
+  accounts Account[]
+  orders   Order[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  access_token      String?
+  refresh_token     String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
 }
 
 model Design {
@@ -63,6 +96,7 @@ model Product {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   uploadedDesigns UploadedDesign[]
+  orderItems      OrderItem[]
 }
 
 model UploadedDesign {
@@ -72,4 +106,47 @@ model UploadedDesign {
   fileUrl   String
   fileName  String
   createdAt DateTime @default(now())
+}
+
+model Order {
+  id               String        @id @default(cuid())
+  userId           String?
+  user             User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  status           OrderStatus   @default(PENDING)
+  paymentMethod    PaymentMethod @default(CASH_ON_DELIVERY)
+  total            Float
+  customerName     String
+  customerEmail    String
+  customerPhone    String
+  shippingAddress  String
+  shippingCity     String
+  shippingCounty   String
+  shippingPostal   String
+  stripeSessionId  String?       @unique
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  items            OrderItem[]
+}
+
+model OrderItem {
+  id           String             @id @default(cuid())
+  orderId      String
+  order        Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product            @relation(fields: [productId], references: [id])
+  /// Snapshot of the product name at the time of ordering
+  productName  String
+  /// Snapshot of the unit price at the time of ordering
+  price        Float
+  quantity     Int
+  customDesign OrderCustomDesign?
+}
+
+model OrderCustomDesign {
+  id          String    @id @default(cuid())
+  orderItemId String    @unique
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  fileUrl     String
+  fileName    String
+  createdAt   DateTime  @default(now())
 }

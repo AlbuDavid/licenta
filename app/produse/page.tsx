@@ -1,6 +1,7 @@
 /* app/produse/page.tsx — Server Component */
 import { Suspense } from "react";
 import { db } from "@/lib/db";
+import { formatPrice } from "@/lib/utils";
 import { ProductCard, type ProductCardProps } from "@/components/product-card";
 import { ProductFilters } from "@/components/shared/ProductFilters";
 import {
@@ -17,9 +18,6 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatPrice(price: number): string {
-  return `${price.toFixed(2).replace(".", ",")} RON`;
-}
 
 const PER_PAGE_OPTIONS = [12, 24, 48] as const;
 const DEFAULT_PER_PAGE = 12;

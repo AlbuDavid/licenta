@@ -4,9 +4,11 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { FcGoogle } from "react-icons/fc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 
 export function LoginForm() {
@@ -65,6 +67,23 @@ export function LoginForm() {
             {error}
           </div>
         )}
+
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full border-slate-200 hover:bg-slate-50"
+          onClick={() => signIn("google", { callbackUrl: "/" })}
+        >
+          <FcGoogle className="mr-2 h-5 w-5" />
+          Continuă cu Google
+        </Button>
+
+        <div className="relative my-6">
+          <Separator />
+          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 text-xs text-slate-400">
+            sau
+          </span>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

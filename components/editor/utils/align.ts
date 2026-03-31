@@ -28,8 +28,8 @@ export function doAlign(
 
 // ── Single object → align to canvas center ───────────────────────────────────
 function alignSingle(canvas: fabric.Canvas, obj: fabric.Object, type: AlignType): void {
-  const cw  = (canvas as any).width  as number;
-  const ch  = (canvas as any).height as number;
+  const cw  = canvas.getWidth();
+  const ch  = canvas.getHeight();
   const z   = canvas.getZoom();
   const vpt = canvas.viewportTransform!;
   const docL = -vpt[4] / z, docT = -vpt[5] / z;

@@ -6,7 +6,7 @@ import { FONTS, FONT_SIZES, type TextProps } from '../editor.config';
 interface TextBarProps {
   tp: TextProps;
   setTp: (v: TextProps) => void;
-  applyText: (prop: string, val: any) => void;
+  applyText: (prop: string, val: string | number | boolean) => void;
 }
 
 export function TextBar({ tp, setTp, applyText }: TextBarProps) {

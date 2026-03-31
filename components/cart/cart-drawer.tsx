@@ -11,10 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-
-function formatPrice(price: number): string {
-  return `${price.toFixed(2).replace(".", ",")} RON`;
-}
+import { formatPrice } from "@/lib/utils";
 
 export function CartDrawer() {
   const { items, isOpen, closeCart, removeItem, updateQuantity, totalItems, totalPrice } =
