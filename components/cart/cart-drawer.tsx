@@ -1,6 +1,7 @@
 "use client";
 
 import { Minus, Plus, Trash2, ShoppingBag, Paperclip } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
 import {
   Sheet,
@@ -14,8 +15,14 @@ import { Separator } from "@/components/ui/separator";
 import { formatPrice } from "@/lib/utils";
 
 export function CartDrawer() {
+  const router = useRouter();
   const { items, isOpen, closeCart, removeItem, updateQuantity, totalItems, totalPrice } =
     useCartStore();
+
+  function handleCheckout() {
+    closeCart();
+    router.push("/checkout");
+  }
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && closeCart()}>
@@ -146,7 +153,7 @@ export function CartDrawer() {
               <span>Total</span>
               <span>{formatPrice(totalPrice())}</span>
             </div>
-            <Button className="w-full bg-slate-900 hover:bg-slate-700 mt-1">
+            <Button className="w-full bg-slate-900 hover:bg-slate-700 mt-1" onClick={handleCheckout}>
               Finalizează comanda
             </Button>
             <Button variant="ghost" size="sm" className="w-full text-slate-500" onClick={closeCart}>
