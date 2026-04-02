@@ -82,7 +82,7 @@ export default async function Home() {
               asChild
               size="lg"
               variant="outline"
-              className="text-sm font-medium gap-2 px-6 border-white/20 text-white hover:bg-white/10 hover:text-white"
+              className="text-sm font-medium gap-2 px-6 border-white/20 bg-white/10 text-white hover:bg-white/20"
             >
               <Link href="/editor">
                 <Pen className="size-4" />
@@ -308,7 +308,7 @@ export default async function Home() {
               asChild
               size="lg"
               variant="outline"
-              className="text-sm font-medium gap-2 px-6 border-white/20 text-white hover:bg-white/10 hover:text-white"
+              className="text-sm font-medium gap-2 px-6 border-white/20 bg-white/10 text-white hover:bg-white/20"
             >
               <Link href="/produse">
                 Explorează Produsele
