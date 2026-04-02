@@ -15,9 +15,13 @@ npm run db:seed      # Seed the database (uses tsx)
 npx prisma migrate dev --name <description>   # Create and apply a migration
 npx prisma generate                            # Regenerate the Prisma client after schema changes
 npx prisma studio                              # Open Prisma Studio (DB GUI)
+
+npx playwright test                               # Run Playwright E2E tests (chromium + mobile)
+npx playwright test --project=chromium             # Run desktop-only tests
+npx playwright test --ui                           # Open Playwright UI
 ```
 
-There are no automated tests in this project.
+E2E tests live in `e2e/` and cover the product detail page (navigation, cart, breadcrumbs, tabs, mobile layout). Playwright config is at `playwright.config.ts`.
 
 ## Style
 
@@ -34,7 +38,7 @@ The app uses Next.js App Router with two distinct layout groups:
 - **`app/layout.tsx`** — Root layout (default). Wraps everything with `<Providers>` (NextAuth `SessionProvider`), renders `<SiteHeader>` and `<CartDrawer>` globally.
 - **`app/(editor)/layout.tsx`** — Editor layout group. The `/editor` route lives here and renders full-screen without the site header/cart.
 - **`app/auth/`** — Auth pages (login, register, error) with their own layout.
-- **`app/produse/`** — Product catalog and customization pages.
+- **`app/produse/`** — Product catalog, product detail (`/produse/[id]`), and customization pages.
 
 ### Auth
 
@@ -89,5 +93,8 @@ The document coordinate space is 4000mm wide; initial zoom is calculated as `con
 ### API Routes
 
 - `POST/GET /api/designs` — Save and list user designs (requires auth session).
+- `POST /api/designs/upload` — Upload a custom design file for a product.
+- `GET /api/products/[id]` — Fetch a single product by ID.
+- `GET /api/products/[id]/related` — Fetch up to 4 related products (same category).
 - `POST /api/auth/verify` — Email verification token validation.
 - `GET|POST /api/auth/[...nextauth]` — NextAuth handler.

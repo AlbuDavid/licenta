@@ -121,7 +121,7 @@ export function ProductCard({
     <>
       <Card className="group w-full flex flex-col overflow-hidden border border-border/60 shadow-none hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 rounded-xl">
         {/* Image */}
-        <div className="relative aspect-square w-full bg-muted overflow-hidden">
+        <Link href={`/produse/${id}`} className="relative aspect-square w-full bg-muted overflow-hidden block">
           <img
             src={imageUrl}
             alt={name}
@@ -137,7 +137,7 @@ export function ProductCard({
               </Badge>
             </div>
           )}
-        </div>
+        </Link>
 
         {/* Header */}
         <CardHeader className="px-4 pt-3 pb-1">
@@ -145,7 +145,9 @@ export function ProductCard({
             {category}
           </p>
           <CardTitle className="text-sm font-semibold leading-snug line-clamp-2 mt-0.5">
-            {name}
+            <Link href={`/produse/${id}`} className="hover:underline">
+              {name}
+            </Link>
           </CardTitle>
         </CardHeader>
 
