@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
 import { formatPrice } from "@/lib/utils";
@@ -24,6 +24,18 @@ interface FormState {
   paymentMethod: "CASH_ON_DELIVERY" | "CARD";
 }
 
+interface ProfileResponse {
+  user: {
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    shippingAddress: string | null;
+    shippingCity: string | null;
+    shippingCounty: string | null;
+    shippingPostal: string | null;
+  };
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, totalPrice, clearCart } = useCartStore();
@@ -40,6 +52,27 @@ export default function CheckoutPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Pre-fill form with saved profile data if user is logged in
+  useEffect(() => {
+    fetch("/api/profile")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: ProfileResponse | null) => {
+        if (!data?.user) return;
+        const { user } = data;
+        setForm((prev) => ({
+          ...prev,
+          customerName: user.name ?? prev.customerName,
+          customerEmail: user.email ?? prev.customerEmail,
+          customerPhone: user.phone ?? prev.customerPhone,
+          shippingAddress: user.shippingAddress ?? prev.shippingAddress,
+          shippingCity: user.shippingCity ?? prev.shippingCity,
+          shippingCounty: user.shippingCounty ?? prev.shippingCounty,
+          shippingPostal: user.shippingPostal ?? prev.shippingPostal,
+        }));
+      })
+      .catch(() => {/* not logged in or network error — ignore */});
+  }, []);
 
   function set(field: keyof FormState, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));

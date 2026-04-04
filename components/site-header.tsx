@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { GiLaserburn } from "react-icons/gi";
-import { CircleCheckIcon, CircleHelpIcon, CircleIcon } from "lucide-react";
 import { AuthNav } from "@/components/auth/auth-nav";
 import { CartButton } from "@/components/cart/cart-button";
 import {
@@ -11,100 +10,112 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
-  navigationMenuTriggerStyle, // Acesta e un stil ajutător care face un link să arate ca un buton
+  navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { MdOutlineLightMode } from "react-icons/md";
-import { FaCartShopping } from "react-icons/fa6";
 
-const produse: { title: string; href: string; description: string }[] = [
+interface ProductLink {
+  title: string;
+  href: string;
+}
+
+interface MaterialGroup {
+  material: string;
+  items: ProductLink[];
+}
+
+const materialGroups: MaterialGroup[] = [
   {
-    title: "Tablouri ardezie",
-    href: "/",
-    description: "Tablouri personalizate gravate cu laseriul",
+    material: "Ardezie",
+    items: [
+      { title: "Tablouri personalizate", href: "/produse?category=Ardezie" },
+      { title: "Suporturi cană", href: "/produse?category=Ardezie" },
+    ],
   },
   {
-    title: "Suport cana",
-    href: "/",
-    description: "Suport de cana personalizat gravat cu laserul",
+    material: "Lemn",
+    items: [
+      { title: "Breloc gravat", href: "/produse?category=Lemn" },
+      { title: "Copertă laptop", href: "/produse?category=Lemn" },
+    ],
+  },
+  {
+    material: "Metal",
+    items: [
+      { title: "Pix metalic gravat", href: "/produse?category=Metal" },
+    ],
   },
 ];
 
 export function SiteHeader() {
   return (
-    <header className="top-0 z-50 w-full bg-background/95 backdrop-blur">
-      <div className="container flex h-14 items-center p-2 min-w-full justify-between">
-        <div className=" flex m-2 items-center">
-          <GiLaserburn className="mr-2" />
-          <Link href="/" className="flex items-center space-x-2">
-            {/* TODO: Aici poți pune un <Image> cu logo-ul */}
+    <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-background/95 backdrop-blur-sm dark:border-slate-800">
+      <div className="mx-auto grid h-14 w-full max-w-7xl grid-cols-3 items-center px-6">
 
-            <span className="font-bold sm:inline-block">The White Laser</span>
-          </Link>
-        </div>
+        {/* Logo — pinned left */}
+        <Link
+          href="/"
+          className="flex items-center gap-2 font-bold text-slate-900 transition-opacity hover:opacity-75 dark:text-slate-100"
+        >
+          <GiLaserburn className="size-5" />
+          <span>The White Laser</span>
+        </Link>
 
-        <div className="flex m-2 justify-center">
+        {/* Navigation — truly centered */}
+        <div className="flex justify-center">
           <NavigationMenu>
             <NavigationMenuList>
+
+              {/* Produse — mega menu grouped by material */}
               <NavigationMenuItem>
-                <NavigationMenuTrigger className={navigationMenuTriggerStyle()}>
-                  Categorii
+                <NavigationMenuTrigger className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Produse
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <ul className="grid gap-2 sm:w-[400px] md:w-[500px] md:grid-cols-2 lg:w-[600px]">
-                    {produse.map((produs) => (
-                      <li key={produs.title}>
-                        <NavigationMenuLink
-                          href={produs.href}
-                          className={navigationMenuTriggerStyle()}
-                        >
-                          <div className="font-medium">{produs.title}</div>
-                          <p className="text-sm">{produs.description}</p>
-                        </NavigationMenuLink>
-                      </li>
+                  <div className="grid w-[480px] grid-cols-3 gap-6 p-6">
+                    {materialGroups.map((group) => (
+                      <div key={group.material}>
+                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+                          {group.material}
+                        </p>
+                        <ul className="space-y-1">
+                          {group.items.map((item) => (
+                            <li key={item.title}>
+                              <NavigationMenuLink asChild>
+                                <Link
+                                  href={item.href}
+                                  className="block rounded px-2 py-1.5 text-sm text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                                >
+                                  {item.title}
+                                </Link>
+                              </NavigationMenuLink>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     ))}
-                  </ul>
+                    <div className="col-span-3 border-t border-slate-100 pt-3 dark:border-slate-800">
+                      <NavigationMenuLink asChild>
+                        <Link
+                          href="/produse"
+                          className="text-sm font-medium text-slate-900 transition-colors hover:text-slate-600 dark:text-slate-100 dark:hover:text-slate-400"
+                        >
+                          Vezi toate produsele →
+                        </Link>
+                      </NavigationMenuLink>
+                    </div>
+                  </div>
                 </NavigationMenuContent>
               </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuTrigger>Materiale</NavigationMenuTrigger>
-                <NavigationMenuContent>
-                  <ul className="grid w-[200px] gap-4">
-                    <li>
-                      <NavigationMenuLink asChild>
-                        <Link href="#">Components</Link>
-                      </NavigationMenuLink>
-                      <NavigationMenuLink asChild>
-                        <Link href="#">Documentation</Link>
-                      </NavigationMenuLink>
-                      <NavigationMenuLink asChild>
-                        <Link href="#">Blocks</Link>
-                      </NavigationMenuLink>
-                    </li>
-                  </ul>
-                </NavigationMenuContent>
 
-                <NavigationMenuLink
-                  href="/produse"
-                  className={navigationMenuTriggerStyle()}
-                >
-                  Produse
-                </NavigationMenuLink>
-                <NavigationMenuLink
-                  href="/oferte"
-                  className={navigationMenuTriggerStyle()}
-                >
-                  Oferte
-                </NavigationMenuLink>
+              <NavigationMenuItem>
                 <NavigationMenuLink
                   href="/portofoliu"
                   className={navigationMenuTriggerStyle()}
                 >
                   Portofoliu
                 </NavigationMenuLink>
-
               </NavigationMenuItem>
+
               <NavigationMenuItem>
                 <NavigationMenuLink
                   href="/editor"
@@ -113,26 +124,17 @@ export function SiteHeader() {
                   Editor
                 </NavigationMenuLink>
               </NavigationMenuItem>
+
             </NavigationMenuList>
           </NavigationMenu>
         </div>
 
-        <div className="flex m-2 items-center gap-1">
-          <NavigationMenu>
-            <NavigationMenuList>
-              <NavigationMenuItem>
-                <NavigationMenuLink
-                  href="/comenzi"
-                  className={navigationMenuTriggerStyle()}
-                >
-                  Comenzi
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-            </NavigationMenuList>
-          </NavigationMenu>
+        {/* Utilities — pinned right */}
+        <div className="flex items-center justify-end gap-1">
           <CartButton />
           <AuthNav />
         </div>
+
       </div>
     </header>
   );

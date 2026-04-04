@@ -42,6 +42,13 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Saved delivery details — pre-filled at checkout
+  phone           String?
+  shippingAddress String?
+  shippingCity    String?
+  shippingCounty  String?
+  shippingPostal  String?
+
   designs  Design[]
   accounts Account[]
   orders   Order[]
