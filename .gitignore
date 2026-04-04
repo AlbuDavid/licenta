@@ -45,3 +45,5 @@ next-env.d.ts
 # User-uploaded design files
 /public/uploads/designs/*
 !/public/uploads/designs/.gitkeep
+.claude/
+claude.md
