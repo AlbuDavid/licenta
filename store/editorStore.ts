@@ -12,6 +12,10 @@ const MAX_HISTORY = 50;
 export type EditorMode = "design" | "preview";
 export type ToolId = "select" | "rectangle" | "ellipse" | "line" | "text" | "pan";
 
+export type AnchorH = "left" | "center" | "right";
+export type AnchorV = "top"  | "middle" | "bottom";
+export interface AnchorPoint { x: AnchorH; y: AnchorV; }
+
 export interface EditorState {
   canvas: Canvas | null;
   selectedObjects: FabricObject[];
@@ -26,6 +30,12 @@ export interface EditorState {
    */
   designThumbnail: string | null;
 
+  // ── Transform panel ───────────────────────────────────────────────────────
+  /** Which of the 9 reference points is used for X/Y positioning. Persists across selection changes. */
+  transformAnchor: AnchorPoint;
+  /** When true, W and H scale together to preserve aspect ratio. */
+  transformLockAspect: boolean;
+
   // ── History ──────────────────────────────────────────────────────────────
   /** Serialized canvas snapshots (most recent at the end). */
   history: string[];
@@ -33,6 +43,8 @@ export interface EditorState {
   historyIndex: number;
   /** Guards against recording snapshots while undo/redo is restoring state. */
   isRestoringHistory: boolean;
+  /** When true, automatic event-based snapshot recording is suppressed. */
+  historyPaused: boolean;
 }
 
 export interface EditorActions {
@@ -44,14 +56,25 @@ export interface EditorActions {
   setDesignThumbnail: (dataUrl: string | null) => void;
   zoomIn: () => void;
   zoomOut: () => void;
+  setTransformAnchor: (anchor: AnchorPoint) => void;
+  setTransformLockAspect: (locked: boolean) => void;
 
   // ── History ──────────────────────────────────────────────────────────────
   /**
    * Appends a snapshot to the history stack.
-   * No-ops when `isRestoringHistory` is true (prevents recursive recording
-   * while loadFromJSON fires object:added events during undo/redo).
+   * No-ops when `isRestoringHistory` or `historyPaused` is true.
    */
   pushHistory: (snapshot: string) => void;
+  /** Suppress automatic event-based snapshot recording. */
+  pauseHistory: () => void;
+  /** Resume automatic event-based snapshot recording. */
+  resumeHistory: () => void;
+  /**
+   * Capture the current canvas state and force-push it to the history stack.
+   * Bypasses `isRestoringHistory` and `historyPaused` guards.
+   * Use after batch operations (alignment, grouping, property changes).
+   */
+  takeSnapshot: () => void;
   /** Restore the previous canvas state. */
   undo: () => Promise<void>;
   /** Restore the next canvas state (after an undo). */
@@ -69,9 +92,13 @@ export const useEditorStore = create<EditorState & EditorActions>((set, get) => 
   activeTool: "select",
   designThumbnail: null,
 
+  transformAnchor: { x: "center", y: "middle" },
+  transformLockAspect: false,
+
   history: [],
   historyIndex: -1,
   isRestoringHistory: false,
+  historyPaused: false,
 
   // ── Actions ───────────────────────────────────────────────────────────────
   setCanvas: (canvas) => set({ canvas }),
@@ -80,6 +107,8 @@ export const useEditorStore = create<EditorState & EditorActions>((set, get) => 
   setMode: (mode) => set({ mode }),
   setActiveTool: (tool) => set({ activeTool: tool }),
   setDesignThumbnail: (dataUrl) => set({ designThumbnail: dataUrl }),
+  setTransformAnchor: (anchor) => set({ transformAnchor: anchor }),
+  setTransformLockAspect: (locked) => set({ transformLockAspect: locked }),
 
   zoomIn: () =>
     set((state) => {
@@ -104,13 +133,40 @@ export const useEditorStore = create<EditorState & EditorActions>((set, get) => 
   // ── History actions ───────────────────────────────────────────────────────
 
   pushHistory: (snapshot) => {
-    if (get().isRestoringHistory) return;
+    const { isRestoringHistory, historyPaused } = get();
+    if (isRestoringHistory || historyPaused) return;
 
     set((state) => {
       // Drop any "future" snapshots when a new action is taken after an undo
       const base = state.history.slice(0, state.historyIndex + 1);
       base.push(snapshot);
       // Trim to MAX_HISTORY
+      const trimmed = base.length > MAX_HISTORY
+        ? base.slice(base.length - MAX_HISTORY)
+        : base;
+      return { history: trimmed, historyIndex: trimmed.length - 1 };
+    });
+  },
+
+  pauseHistory: () => set({ historyPaused: true }),
+  resumeHistory: () => set({ historyPaused: false }),
+
+  takeSnapshot: () => {
+    const { canvas } = get();
+    if (!canvas) return;
+    const raw = canvas.toJSON() as {
+      objects?: Array<{ data?: { tag?: string }; excludeFromExport?: boolean }>;
+    };
+    if (raw.objects) {
+      raw.objects = raw.objects.filter(
+        (o) => !o.excludeFromExport && o.data?.tag !== "__snap_guide__",
+      );
+    }
+    const json = JSON.stringify(raw);
+    // Force-push — bypasses isRestoringHistory and historyPaused
+    set((state) => {
+      const base = state.history.slice(0, state.historyIndex + 1);
+      base.push(json);
       const trimmed = base.length > MAX_HISTORY
         ? base.slice(base.length - MAX_HISTORY)
         : base;

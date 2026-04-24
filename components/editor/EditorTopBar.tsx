@@ -203,6 +203,7 @@ export function EditorTopBar() {
             <SelectItem value="none"      className="text-xs focus:bg-slate-700">Fără șablon</SelectItem>
             <SelectItem value="circle"    className="text-xs focus:bg-slate-700">{TEMPLATES.circle.label}</SelectItem>
             <SelectItem value="square"    className="text-xs focus:bg-slate-700">{TEMPLATES.square.label}</SelectItem>
+            <SelectItem value="heart"     className="text-xs focus:bg-slate-700">{TEMPLATES.heart.label}</SelectItem>
             <SelectItem value="rectangle" className="text-xs focus:bg-slate-700">{TEMPLATES.rectangle.label}</SelectItem>
           </SelectContent>
         </Select>

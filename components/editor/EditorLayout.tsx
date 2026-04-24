@@ -4,6 +4,7 @@ import { type ReactNode } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { EditorTopBar } from "@/components/editor/EditorTopBar";
 import { EditorSidebar } from "@/components/editor/EditorSidebar";
+import { TransformBar } from "@/components/editor/TransformBar";
 
 interface EditorLayoutProps {
   /** The canvas component rendered in the central area. */
@@ -15,6 +16,7 @@ export function EditorLayout({ canvasSlot }: EditorLayoutProps) {
     <TooltipProvider delayDuration={400}>
       <div className="flex flex-col h-[calc(100vh-56px)] bg-slate-700 overflow-hidden text-slate-100">
         <EditorTopBar />
+        <TransformBar />
         <div className="flex flex-1 overflow-hidden">
           <EditorSidebar />
           <main className="flex flex-1 overflow-hidden">
