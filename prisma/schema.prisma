@@ -100,6 +100,7 @@ model Product {
   imageUrl        String?
   category        String           @default("General")
   isCustomizable  Boolean          @default(false)
+  active          Boolean          @default(true)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   uploadedDesigns UploadedDesign[]
@@ -156,4 +157,15 @@ model OrderCustomDesign {
   fileUrl     String
   fileName    String
   createdAt   DateTime  @default(now())
+}
+
+model PresetDesign {
+  id         String   @id @default(cuid())
+  name       String
+  category   String
+  svgContent String
+  sortOrder  Int      @default(0)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }

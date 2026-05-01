@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -15,12 +15,15 @@ import {
   Hand,
   ImagePlus,
   FileCode2,
+  Shapes,
+  PenTool,
 } from "lucide-react";
 import { useEditorStore } from "@/store/editorStore";
 import type { ToolId } from "@/store/editorStore";
 import { useEditorTools } from "@/hooks/useEditorTools";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { PresetPanel } from "@/components/editor/PresetPanel";
 
 interface SidebarTool {
   id: ToolId;
@@ -35,6 +38,7 @@ const tools: SidebarTool[] = [
   { id: "rectangle", label: "Dreptunghi", icon: <Square        size={16} />, shortcut: "R" },
   { id: "ellipse",   label: "Elipsă",     icon: <Circle        size={16} />, shortcut: "E" },
   { id: "line",      label: "Linie",      icon: <Minus         size={16} />, shortcut: "L" },
+  { id: "pen",       label: "Instrument Peniță", icon: <PenTool size={16} />, shortcut: "P" },
   { id: "text",      label: "Text",       icon: <Type          size={16} />, shortcut: "T" },
 ];
 
@@ -42,6 +46,7 @@ export function EditorSidebar() {
   const activeTool    = useEditorStore((s) => s.activeTool);
   const setActiveTool = useEditorStore((s) => s.setActiveTool);
   const { addImage, addSVG } = useEditorTools();
+  const [presetsOpen, setPresetsOpen] = useState(false);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const svgInputRef   = useRef<HTMLInputElement>(null);
@@ -61,6 +66,7 @@ export function EditorSidebar() {
   }
 
   return (
+    <div className="flex shrink-0">
     <aside className="flex flex-col items-center gap-1 py-2 w-11 bg-slate-800 border-r border-slate-700 shrink-0">
       {tools.map((tool) => {
         const isActive = activeTool === tool.id;
@@ -138,6 +144,31 @@ export function EditorSidebar() {
         className="hidden"
         onChange={handleSVGFile}
       />
+
+      <Separator className="w-6 bg-slate-700 my-1" />
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`h-8 w-8 transition-colors ${
+              presetsOpen
+                ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                : "text-slate-400 hover:text-slate-100 hover:bg-slate-700"
+            }`}
+            onClick={() => setPresetsOpen((v) => !v)}
+            aria-pressed={presetsOpen}
+            aria-label="Preset-uri"
+          >
+            <Shapes size={16} />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Preset-uri design</TooltipContent>
+      </Tooltip>
     </aside>
+
+    {presetsOpen && <PresetPanel onClose={() => setPresetsOpen(false)} />}
+    </div>
   );
 }
