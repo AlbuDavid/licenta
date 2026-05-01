@@ -17,8 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { formatPrice } from "@/lib/utils";
 import { MapPin, Package, ShieldCheck, User } from "lucide-react";
-
-type OrderStatus = "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+import { StatusBadge, type OrderStatus } from "@/components/admin/StatusBadge";
 
 interface RecentOrder {
   id: string;
@@ -48,22 +47,6 @@ interface ProfileData {
   user: UserData;
   recentOrders: RecentOrder[];
 }
-
-const STATUS_LABELS: Record<OrderStatus, string> = {
-  PENDING: "În așteptare",
-  PROCESSING: "În procesare",
-  SHIPPED: "Expediat",
-  DELIVERED: "Livrat",
-  CANCELLED: "Anulat",
-};
-
-const STATUS_STYLES: Record<OrderStatus, string> = {
-  PENDING: "bg-amber-100 text-amber-800 border-amber-200",
-  PROCESSING: "bg-blue-100 text-blue-800 border-blue-200",
-  SHIPPED: "bg-indigo-100 text-indigo-800 border-indigo-200",
-  DELIVERED: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  CANCELLED: "bg-red-100 text-red-800 border-red-200",
-};
 
 function AvatarInitials({ name, email }: { name: string | null; email: string | null }) {
   const initials = name
@@ -436,9 +419,7 @@ export function ProfileClient({ user, recentOrders }: ProfileData) {
                         </p>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
-                        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[order.status]}`}>
-                          {STATUS_LABELS[order.status]}
-                        </span>
+                        <StatusBadge status={order.status} />
                         <span className="text-sm font-semibold text-slate-900">
                           {formatPrice(order.total)}
                         </span>
