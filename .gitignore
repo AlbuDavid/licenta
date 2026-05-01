@@ -50,3 +50,4 @@ next-env.d.ts
 !/public/uploads/designs/.gitkeep
 .claude/
 claude.md
+DEVLOG.local.md

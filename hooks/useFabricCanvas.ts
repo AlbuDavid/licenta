@@ -52,6 +52,12 @@ export function useFabricCanvas(
     fabricRef.current = canvas;
     setCanvas(canvas);
 
+    // Expose for E2E tests (dev only)
+    if (process.env.NODE_ENV === "development") {
+      (window as unknown as Record<string, unknown>).__fabricCanvas = canvas;
+      (window as unknown as Record<string, unknown>).__fabric = fabric;
+    }
+
     // Keep zoom% in sync as viewport changes
     const syncZoom = () => setZoom(Math.round(canvas.getZoom() * 100));
     canvas.on("after:render", syncZoom);
