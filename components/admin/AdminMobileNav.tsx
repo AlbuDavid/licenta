@@ -3,56 +3,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Package,
-  Sparkles,
-  ShoppingCart,
-  ArrowLeft,
-  Menu,
-} from "lucide-react";
+import { ArrowLeft, Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-
-interface NavItem {
-  href: string;
-  label: string;
-  icon: typeof LayoutDashboard;
-  match: (pathname: string) => boolean;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  {
-    href: "/admin",
-    label: "Tablou de bord",
-    icon: LayoutDashboard,
-    match: (p) => p === "/admin",
-  },
-  {
-    href: "/admin/products",
-    label: "Produse",
-    icon: Package,
-    match: (p) => p.startsWith("/admin/products"),
-  },
-  {
-    href: "/admin/presets",
-    label: "Preset-uri",
-    icon: Sparkles,
-    match: (p) => p.startsWith("/admin/presets"),
-  },
-  {
-    href: "/admin/orders",
-    label: "Comenzi",
-    icon: ShoppingCart,
-    match: (p) => p.startsWith("/admin/orders"),
-  },
-];
+import { ADMIN_NAV_ITEMS } from "@/components/admin/admin-nav";
 
 export function AdminMobileNav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  const current = NAV_ITEMS.find((item) => item.match(pathname));
+  const current = ADMIN_NAV_ITEMS.find((item) => item.match(pathname));
 
   return (
     <div className="md:hidden sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-white border-b border-slate-200">
@@ -86,7 +46,7 @@ export function AdminMobileNav() {
           </SheetHeader>
 
           <nav className="flex-1 px-3 py-4 space-y-1">
-            {NAV_ITEMS.map((item) => {
+            {ADMIN_NAV_ITEMS.map((item) => {
               const active = item.match(pathname);
               const Icon = item.icon;
               return (

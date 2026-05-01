@@ -35,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { formatPrice } from "@/lib/utils";
 
 interface Product {
@@ -53,6 +54,8 @@ interface Product {
 interface ProductsAdminClientProps {
   initialProducts: Product[];
 }
+
+const DEFAULT_CATEGORIES = ["Ardezie", "Lemn", "Metal", "General"];
 
 const emptyForm = {
   name: "",
@@ -113,11 +116,11 @@ export function ProductsAdminClient({
   const [previewUrl, setPreviewUrl] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Unique categories derived from current product list
-  const allCategories = useMemo(
-    () => [...new Set(products.map((p) => p.category))].sort(),
-    [products]
-  );
+  // Merge hardcoded defaults with categories that already exist in the product list
+  const allCategories = useMemo(() => {
+    const fromProducts = products.map((p) => p.category);
+    return [...new Set([...DEFAULT_CATEGORIES, ...fromProducts])].sort();
+  }, [products]);
 
   const hasFilters =
     filterText !== "" || filterCategory !== "all" || filterActive !== "all";
@@ -637,19 +640,18 @@ export function ProductsAdminClient({
                         {c}
                       </SelectItem>
                     ))}
-                    {!allCategories.includes("General") && (
-                      <SelectItem value="General">General</SelectItem>
-                    )}
                   </SelectContent>
                 </Select>
               </div>
               <div className="col-span-2 space-y-1.5">
                 <Label htmlFor="p-desc">Descriere</Label>
-                <Input
+                <Textarea
                   id="p-desc"
+                  rows={3}
                   value={form.description}
                   onChange={(e) => patchForm("description", e.target.value)}
                   placeholder="Descriere scurtă a produsului..."
+                  className="resize-none text-sm"
                 />
               </div>
             </div>

@@ -28,6 +28,7 @@ import {
   ArrowDown,
   Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,7 +57,6 @@ export function PresetsAdminClient() {
   const [presets, setPresets] = useState<PresetDesign[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Upload / Create form
   const [showCreate, setShowCreate] = useState(false);
@@ -88,10 +88,9 @@ export function PresetsAdminClient() {
       if (!res.ok) throw new Error("Failed to fetch");
       const data: PresetDesign[] = await res.json();
       setPresets(data);
-      setError(null);
     } catch (err) {
       console.error("[AdminPresets]", err);
-      setError("Nu s-au putut încărca preset-urile");
+      toast.error("Nu s-au putut încărca preset-urile");
     } finally {
       setLoading(false);
     }
@@ -115,10 +114,11 @@ export function PresetsAdminClient() {
       if (!res.ok) throw new Error("Failed to create");
       setForm({ name: "", category: CATEGORIES[0], svgContent: "", sortOrder: 0 });
       setShowCreate(false);
+      toast.success("Preset creat");
       await fetchPresets();
     } catch (err) {
       console.error("[AdminPresets] create", err);
-      setError("Eroare la crearea preset-ului");
+      toast.error("Eroare la crearea preset-ului");
     } finally {
       setSaving(false);
     }
@@ -153,10 +153,11 @@ export function PresetsAdminClient() {
       });
       if (!res.ok) throw new Error("Failed to update");
       setEditPreset(null);
+      toast.success("Preset actualizat");
       await fetchPresets();
     } catch (err) {
       console.error("[AdminPresets] update", err);
-      setError("Eroare la actualizarea preset-ului");
+      toast.error("Eroare la actualizarea preset-ului");
     } finally {
       setSaving(false);
     }
@@ -173,6 +174,7 @@ export function PresetsAdminClient() {
       await fetchPresets();
     } catch (err) {
       console.error("[AdminPresets] toggle", err);
+      toast.error("Eroare la actualizarea preset-ului");
     }
   }
 
@@ -201,10 +203,11 @@ export function PresetsAdminClient() {
       });
       if (!res.ok) throw new Error("Failed to delete");
       setDeleteTarget(null);
+      toast.success("Preset șters");
       await fetchPresets();
     } catch (err) {
       console.error("[AdminPresets] delete", err);
-      setError("Eroare la ștergerea preset-ului");
+      toast.error("Eroare la ștergerea preset-ului");
     } finally {
       setSaving(false);
     }
@@ -230,12 +233,6 @@ export function PresetsAdminClient() {
           Adaugă preset
         </Button>
       </div>
-
-      {error && (
-        <div className="bg-red-50 text-red-700 text-sm rounded-md px-4 py-3 mb-4">
-          {error}
-        </div>
-      )}
 
       {loading && (
         <div className="flex items-center justify-center py-16">

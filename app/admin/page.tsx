@@ -7,6 +7,7 @@ import {
   ShoppingCart,
   Clock,
   TrendingUp,
+  Users,
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatPrice } from "@/lib/utils";
@@ -29,6 +30,7 @@ interface DashboardStats {
   totalOrders: number;
   pendingOrders: number;
   totalRevenue: number;
+  totalUsers: number;
 }
 
 interface RecentOrder {
@@ -62,6 +64,7 @@ async function getDashboardData(): Promise<{
       activePresets,
       totalOrders,
       pendingOrders,
+      totalUsers,
       revenueAgg,
       recent,
       recentForChart,
@@ -71,6 +74,7 @@ async function getDashboardData(): Promise<{
       db.presetDesign.count({ where: { active: true } }),
       db.order.count(),
       db.order.count({ where: { status: "PENDING" } }),
+      db.user.count(),
       db.order.aggregate({
         where: { status: { not: "CANCELLED" } },
         _sum: { total: true },
@@ -139,6 +143,7 @@ async function getDashboardData(): Promise<{
         totalOrders,
         pendingOrders,
         totalRevenue: revenueAgg._sum.total ?? 0,
+        totalUsers,
       },
       recentOrders: recent.map((o) => ({
         id: o.id,
@@ -160,6 +165,7 @@ async function getDashboardData(): Promise<{
         totalOrders: 0,
         pendingOrders: 0,
         totalRevenue: 0,
+        totalUsers: 0,
       },
       recentOrders: [],
       revenueByDay: [],
@@ -235,8 +241,8 @@ export default async function AdminDashboardPage() {
         </p>
       </div>
 
-      {/* Stat cards — 5 columns on large screens */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      {/* Stat cards — 3 columns on large screens, 2 rows */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <StatCard
           label="Produse"
           value={stats.totalProducts}
@@ -268,6 +274,12 @@ export default async function AdminDashboardPage() {
           icon={TrendingUp}
           href="/admin/orders"
           accent="emerald"
+        />
+        <StatCard
+          label="Utilizatori"
+          value={stats.totalUsers}
+          icon={Users}
+          href="/admin/users"
         />
       </div>
 
