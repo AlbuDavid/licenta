@@ -72,10 +72,16 @@ export function useSelectionSync() {
         );
         if (toRemove.length === 0) return;
 
+        // Batch removals into a single undo step
+        const store = useEditorStore.getState();
+        store.pauseHistory();
+
         canvas.discardActiveObject();
         toRemove.forEach((obj) => canvas.remove(obj));
         canvas.requestRenderAll();
-        // Store is cleared via the selection:cleared event above
+
+        store.resumeHistory();
+        store.takeSnapshot();
       }
     };
 

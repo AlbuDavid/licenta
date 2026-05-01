@@ -16,7 +16,7 @@ export function doAlign(
   const active = canvas.getActiveObject();
   if (!active) return;
 
-  if (active.type === 'activeSelection') {
+  if (active.type === 'activeselection') {
     alignMultiple(canvas, active as fabric.ActiveSelection, type, anchor ?? null);
   } else {
     alignSingle(canvas, active, type);

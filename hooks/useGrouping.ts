@@ -7,6 +7,15 @@ import {
   sendBackwards,
 } from "@/components/editor/utils/fabric-compat";
 
+/** Pause history, run fn, resume, take one snapshot. */
+function batched(fn: () => void) {
+  const store = useEditorStore.getState();
+  store.pauseHistory();
+  fn();
+  store.resumeHistory();
+  store.takeSnapshot();
+}
+
 /**
  * Grouping & layering operations for the active canvas selection.
  *
@@ -35,22 +44,20 @@ export function useGrouping() {
   function groupSelected() {
     if (!canvas) return;
     const active = canvas.getActiveObject();
-    if (!active || active.type !== "activeSelection") return;
+    if (!active || active.type !== "activeselection") return;
 
-    const selection = active as fabric.ActiveSelection;
-    const objects   = selection.getObjects() as fabric.FabricObject[];
+    batched(() => {
+      const selection = active as fabric.ActiveSelection;
+      const objects   = selection.getObjects() as fabric.FabricObject[];
 
-    // Step 1 — dissolve the temporary multi-select container
-    canvas.discardActiveObject();
+      canvas!.discardActiveObject();
+      objects.forEach((o) => canvas!.remove(o));
 
-    // Step 2 — remove individual objects from canvas
-    objects.forEach((o) => canvas.remove(o));
-
-    // Step 3 — create a persistent Group and add it
-    const group = new fabric.Group(objects);
-    canvas.add(group);
-    canvas.setActiveObject(group);
-    canvas.requestRenderAll();
+      const group = new fabric.Group(objects);
+      canvas!.add(group);
+      canvas!.setActiveObject(group);
+      canvas!.requestRenderAll();
+    });
   }
 
   function ungroupSelected() {
@@ -58,19 +65,17 @@ export function useGrouping() {
     const active = canvas.getActiveObject();
     if (!active || active.type !== "group") return;
 
-    const group   = active as fabric.Group;
-    const objects = group.getObjects() as fabric.FabricObject[];
+    batched(() => {
+      const group = active as fabric.Group;
+      const objects = group.removeAll() as fabric.FabricObject[];
 
-    // Remove the group; children lose their group-relative transforms
-    canvas.remove(group);
+      canvas!.remove(group);
+      objects.forEach((o) => canvas!.add(o));
 
-    // Re-add each child — Fabric converts transforms back to canvas-absolute
-    objects.forEach((o) => canvas.add(o));
-
-    // Re-select all children as a multi-selection so the user can keep editing
-    const newSelection = new fabric.ActiveSelection(objects, { canvas });
-    canvas.setActiveObject(newSelection);
-    canvas.requestRenderAll();
+      const newSelection = new fabric.ActiveSelection(objects, { canvas: canvas! });
+      canvas!.setActiveObject(newSelection);
+      canvas!.requestRenderAll();
+    });
   }
 
   function bringObjectForward() {

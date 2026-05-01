@@ -10,7 +10,7 @@ const MAX_HISTORY = 50;
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type EditorMode = "design" | "preview";
-export type ToolId = "select" | "rectangle" | "ellipse" | "line" | "text" | "pan";
+export type ToolId = "select" | "rectangle" | "ellipse" | "line" | "text" | "pan" | "pen";
 
 export type AnchorH = "left" | "center" | "right";
 export type AnchorV = "top"  | "middle" | "bottom";
@@ -159,7 +159,10 @@ export const useEditorStore = create<EditorState & EditorActions>((set, get) => 
     };
     if (raw.objects) {
       raw.objects = raw.objects.filter(
-        (o) => !o.excludeFromExport && o.data?.tag !== "__snap_guide__",
+        (o) =>
+          !o.excludeFromExport &&
+          o.data?.tag !== "__snap_guide__" &&
+          o.data?.tag !== "__pen_preview__",
       );
     }
     const json = JSON.stringify(raw);

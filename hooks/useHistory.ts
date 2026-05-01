@@ -81,18 +81,6 @@ export function useHistory() {
       // canvas IText editing — contenteditable div used by Fabric
       if ((e.target as HTMLElement)?.isContentEditable) return;
 
-      // Delete / Backspace — remove selected objects
-      if (e.key === "Delete" || e.key === "Backspace") {
-        if (!canvas) return;
-        const active = canvas.getActiveObjects();
-        if (active.length === 0) return;
-        e.preventDefault();
-        active.forEach((obj) => canvas.remove(obj));
-        canvas.discardActiveObject();
-        canvas.requestRenderAll();
-        return;
-      }
-
       if (!e.ctrlKey && !e.metaKey) return;
 
       if (e.key === "z" || e.key === "Z") {

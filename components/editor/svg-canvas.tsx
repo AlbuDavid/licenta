@@ -296,7 +296,7 @@ export default function SvgCanvas({
   const groupSelected = useCallback(() => {
     const c = fcRef.current; if (!c) return;
     const a = c.getActiveObject();
-    if (!a || a.type !== 'activeSelection') return;
+    if (!a || a.type !== 'activeselection') return;
     const sel  = a as fabric.ActiveSelection;
     const objs = sel.getObjects();
     const grp  = new fabric.Group(objs);
@@ -312,7 +312,7 @@ export default function SvgCanvas({
     const a = c.getActiveObject();
     if (!a || a.type !== 'group') return;
     const grp  = a as fabric.Group;
-    const objs = grp.getObjects();
+    const objs = grp.removeAll();
     c.remove(grp);
     objs.forEach(o => c.add(o));
     const sel = new fabric.ActiveSelection(objs, { canvas: c });

@@ -72,13 +72,16 @@ export function useAlignment() {
 
   // ── Core helpers ──────────────────────────────────────────────────────────
 
-  /** Unwrap active selection, run fn, then re-wrap and render. */
+  /** Unwrap active selection, run fn, then re-wrap, render, and record one undo snapshot. */
   function withObjects(fn: (objects: FabricObject[]) => void) {
     if (!canvas) return;
     const active = canvas.getActiveObject();
     if (!active) return;
 
-    const isSel   = active.type === "activeSelection";
+    const store = useEditorStore.getState();
+    store.pauseHistory();
+
+    const isSel   = active.type === "activeselection";
     const objects = isSel
       ? (active as ActiveSelection).getObjects() as FabricObject[]
       : [active as FabricObject];
@@ -94,6 +97,9 @@ export function useAlignment() {
       canvas.setActiveObject(objects[0]);
     }
     canvas.requestRenderAll();
+
+    store.resumeHistory();
+    store.takeSnapshot();
   }
 
   // ── Align ────────────────────────────────────────────────────────────────
