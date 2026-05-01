@@ -1,6 +1,6 @@
 /* components/editor/editor.config.ts */
 
-export type Tool = 'select' | 'rect' | 'ellipse' | 'line' | 'text' | 'pan';
+export type Tool = 'select' | 'rect' | 'ellipse' | 'line' | 'text' | 'pan' | 'pen';
 export type MaterialMode = 'none' | 'slate' | 'wood';
 
 export interface TextProps {
@@ -29,6 +29,7 @@ export const SHORTCUTS = [
   { keys: 'R / F6',          desc: 'Dreptunghi' },
   { keys: 'E / F7',          desc: 'Elipsă' },
   { keys: 'I',               desc: 'Linie' },
+  { keys: 'P',               desc: 'Peniță (curbă Bezier)' },
   { keys: 'T',               desc: 'Text' },
   { keys: 'H',               desc: 'Pan (mână)' },
   { keys: 'Escape',          desc: 'Revino la Selectare' },

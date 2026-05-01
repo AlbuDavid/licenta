@@ -21,6 +21,7 @@ import { useHistory } from "@/hooks/useHistory";
 import { useDrawingMode } from "@/hooks/useDrawingMode";
 import { useSelectionBehavior } from "@/hooks/useSelectionBehavior";
 import { usePreviewMode } from "@/hooks/usePreviewMode";
+import { usePenTool } from "@/hooks/usePenTool";
 
 export default function EditorCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -34,6 +35,7 @@ export default function EditorCanvas() {
   useDrawingMode();
   useSelectionBehavior();
   usePreviewMode("slate");
+  usePenTool();
 
   return (
     // Container fills the canvas area slot — ResizeObserver tracks its size
