@@ -11,7 +11,19 @@ import {
   ShieldCheck,
   ShieldOff,
   ExternalLink,
+  Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +50,7 @@ interface AdminUser {
 
 interface UsersAdminClientProps {
   initialUsers: AdminUser[];
+  currentUserId: string;
 }
 
 type SortKey = "name" | "email" | "createdAt" | "orderCount" | "totalSpent";
@@ -93,13 +106,14 @@ const CHIP_OFF = "bg-white text-slate-600 border-slate-200 hover:border-slate-40
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function UsersAdminClient({ initialUsers }: UsersAdminClientProps) {
+export function UsersAdminClient({ initialUsers, currentUserId }: UsersAdminClientProps) {
   const [users, setUsers] = useState<AdminUser[]>(initialUsers);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey | null>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const hasFilters = search !== "" || roleFilter !== "all";
 
@@ -170,6 +184,21 @@ export function UsersAdminClient({ initialUsers }: UsersAdminClientProps) {
       toast.error(e instanceof Error ? e.message : "Eroare la modificarea rolului");
     } finally {
       setTogglingId(null);
+    }
+  }
+
+  async function deleteUser(user: AdminUser) {
+    setDeletingId(user.id);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, { method: "DELETE" });
+      const data: { success?: boolean; error?: string } = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Eroare");
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+      toast.success(`Contul ${user.name ?? user.email} a fost șters.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Eroare la ștergerea contului");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -356,32 +385,83 @@ export function UsersAdminClient({ initialUsers }: UsersAdminClientProps) {
 
                   {/* Actions */}
                   <td className="px-4 py-3 text-right">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={`size-8 ${
-                            user.role === "ADMIN"
-                              ? "text-indigo-600 hover:text-red-600 hover:bg-red-50"
-                              : "text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
-                          }`}
-                          disabled={togglingId === user.id}
-                          onClick={() => toggleRole(user)}
-                        >
-                          {user.role === "ADMIN" ? (
-                            <ShieldOff size={15} />
-                          ) : (
-                            <ShieldCheck size={15} />
-                          )}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="left">
-                        {user.role === "ADMIN"
-                          ? "Retrogradează la Client"
-                          : "Promovează la Admin"}
-                      </TooltipContent>
-                    </Tooltip>
+                    <div className="flex items-center justify-end gap-1">
+                      {/* Role toggle */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`size-8 ${
+                              user.role === "ADMIN"
+                                ? "text-indigo-600 hover:text-red-600 hover:bg-red-50"
+                                : "text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
+                            }`}
+                            disabled={togglingId === user.id || user.id === currentUserId}
+                            onClick={() => toggleRole(user)}
+                          >
+                            {user.role === "ADMIN" ? (
+                              <ShieldOff size={15} />
+                            ) : (
+                              <ShieldCheck size={15} />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="left">
+                          {user.id === currentUserId
+                            ? "Nu îți poți modifica propriul rol"
+                            : user.role === "ADMIN"
+                              ? "Retrogradează la Client"
+                              : "Promovează la Admin"}
+                        </TooltipContent>
+                      </Tooltip>
+
+                      {/* Delete */}
+                      <AlertDialog>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                disabled={deletingId === user.id || user.id === currentUserId}
+                              >
+                                <Trash2 size={15} />
+                              </Button>
+                            </AlertDialogTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent side="left">
+                            {user.id === currentUserId
+                              ? "Nu îți poți șterge propriul cont"
+                              : "Șterge cont"}
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Ștergi contul utilizatorului?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Contul lui{" "}
+                              <span className="font-medium text-slate-900">
+                                {user.name ?? user.email}
+                              </span>{" "}
+                              ({user.email}) va fi șters definitiv. Comenzile plasate rămân în
+                              sistem ca oaspete. Această acțiune nu poate fi anulată.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Anulează</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                              onClick={() => deleteUser(user)}
+                            >
+                              Șterge cont
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </td>
                 </tr>
               ))}

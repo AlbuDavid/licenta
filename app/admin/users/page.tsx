@@ -1,3 +1,5 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { UsersAdminClient } from "./users-admin-client";
 
@@ -38,6 +40,6 @@ async function getUsers() {
 }
 
 export default async function AdminUsersPage() {
-  const users = await getUsers();
-  return <UsersAdminClient initialUsers={users} />;
+  const [users, session] = await Promise.all([getUsers(), getServerSession(authOptions)]);
+  return <UsersAdminClient initialUsers={users} currentUserId={session?.user?.id ?? ""} />;
 }

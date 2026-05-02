@@ -45,3 +45,25 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ error: "Eroare la actualizarea utilizatorului." }, { status: 500 });
   }
 }
+
+export async function DELETE(_req: NextRequest, ctx: RouteContext) {
+  const session = await getServerSession(authOptions);
+  if (session?.user?.role !== "ADMIN") return adminOnly();
+
+  const { id } = await ctx.params;
+
+  if (id === session.user.id) {
+    return NextResponse.json(
+      { error: "Nu îți poți șterge propriul cont." },
+      { status: 400 },
+    );
+  }
+
+  try {
+    await db.user.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[DELETE /api/admin/users/:id]", error);
+    return NextResponse.json({ error: "Eroare la ștergerea utilizatorului." }, { status: 500 });
+  }
+}
