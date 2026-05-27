@@ -37,6 +37,7 @@ export default async function ProfilPage() {
         select: {
           id: true,
           status: true,
+          paymentStatus: true,
           total: true,
           paymentMethod: true,
           createdAt: true,

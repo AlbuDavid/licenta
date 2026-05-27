@@ -24,6 +24,10 @@ interface FormState {
   paymentMethod: "CASH_ON_DELIVERY" | "CARD";
 }
 
+interface StripeSessionResponse {
+  url: string;
+}
+
 interface ProfileResponse {
   user: {
     name: string | null;
@@ -101,7 +105,6 @@ export default function CheckoutPage() {
         items: items.map((item) => ({
           productId: item.productId,
           productName: item.name,
-          price: item.price,
           quantity: item.quantity,
           ...(item.customDesign
             ? {
@@ -114,19 +117,40 @@ export default function CheckoutPage() {
         })),
       };
 
-      const res = await fetch("/api/orders", {
+      const orderRes = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        const data = await res.json();
+      if (!orderRes.ok) {
+        const data = await orderRes.json();
         setError(data.error ?? "A apărut o eroare. Încearcă din nou.");
         return;
       }
 
-      const { orderId } = await res.json();
+      const { orderId } = await orderRes.json();
+
+      if (form.paymentMethod === "CARD") {
+        // Redirect to Stripe Checkout — cart cleared on success page after payment confirmed
+        const sessionRes = await fetch("/api/checkout/stripe-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId }),
+        });
+
+        if (!sessionRes.ok) {
+          const data = await sessionRes.json();
+          setError(data.error ?? "Nu am putut iniția plata. Încearcă din nou.");
+          return;
+        }
+
+        const { url } = (await sessionRes.json()) as StripeSessionResponse;
+        window.location.href = url;
+        return;
+      }
+
+      // COD — order confirmed immediately
       clearCart();
       router.push(`/checkout/success?orderId=${orderId}`);
     } catch {

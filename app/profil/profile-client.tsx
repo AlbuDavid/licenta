@@ -19,9 +19,19 @@ import { formatPrice } from "@/lib/utils";
 import { MapPin, Package, ShieldCheck, User } from "lucide-react";
 import { StatusBadge, type OrderStatus } from "@/components/admin/StatusBadge";
 
+type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
+
+const PAYMENT_STATUS_PROFILE: Record<PaymentStatus, { label: string; className: string }> = {
+  PENDING:  { label: "În așteptare", className: "bg-slate-100 text-slate-500" },
+  PAID:     { label: "Plătit",       className: "bg-green-50 text-green-700" },
+  FAILED:   { label: "Eșuată",       className: "bg-red-50 text-red-600" },
+  REFUNDED: { label: "Rambursată",   className: "bg-amber-50 text-amber-700" },
+};
+
 interface RecentOrder {
   id: string;
   status: OrderStatus;
+  paymentStatus: PaymentStatus;
   total: number;
   paymentMethod: "CASH_ON_DELIVERY" | "CARD";
   createdAt: string;
@@ -418,8 +428,13 @@ export function ProfileClient({ user, recentOrders }: ProfileData) {
                           · {totalItems(order)} {totalItems(order) === 1 ? "produs" : "produse"}
                         </p>
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <StatusBadge status={order.status} />
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <div className="flex items-center gap-2">
+                          <StatusBadge status={order.status} />
+                          <span className={`text-xs rounded-full px-2 py-0.5 font-medium ${PAYMENT_STATUS_PROFILE[order.paymentStatus].className}`}>
+                            {PAYMENT_STATUS_PROFILE[order.paymentStatus].label}
+                          </span>
+                        </div>
                         <span className="text-sm font-semibold text-slate-900">
                           {formatPrice(order.total)}
                         </span>

@@ -41,10 +41,13 @@ interface OrderItem {
   customDesign: CustomDesign | null;
 }
 
+type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
+
 interface Order {
   id: string;
   status: OrderStatus;
   paymentMethod: "CASH_ON_DELIVERY" | "CARD";
+  paymentStatus: PaymentStatus;
   total: number;
   customerName: string;
   customerEmail: string;
@@ -65,6 +68,22 @@ const PAYMENT_LABELS: Record<string, string> = {
   CASH_ON_DELIVERY: "Ramburs",
   CARD: "Card",
 };
+
+const PAYMENT_STATUS_CONFIG: Record<PaymentStatus, { label: string; className: string }> = {
+  PENDING:  { label: "În așteptare", className: "bg-slate-100 text-slate-600 border-slate-200" },
+  PAID:     { label: "Plătit",       className: "bg-green-50 text-green-700 border-green-200" },
+  FAILED:   { label: "Eșuată",       className: "bg-red-50 text-red-700 border-red-200" },
+  REFUNDED: { label: "Rambursată",   className: "bg-amber-50 text-amber-700 border-amber-200" },
+};
+
+function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
+  const cfg = PAYMENT_STATUS_CONFIG[status];
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${cfg.className}`}>
+      {cfg.label}
+    </span>
+  );
+}
 
 const STATUS_ALL = "ALL";
 
@@ -357,7 +376,10 @@ export function OrdersAdminClient({ initialOrders }: OrdersAdminClientProps) {
                     {formatPrice(order.total)}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant="outline" className="text-slate-600">{PAYMENT_LABELS[order.paymentMethod]}</Badge>
+                    <div className="flex flex-col gap-1">
+                      <Badge variant="outline" className="text-slate-600 w-fit">{PAYMENT_LABELS[order.paymentMethod]}</Badge>
+                      <PaymentStatusBadge status={order.paymentStatus} />
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <Select
@@ -500,6 +522,10 @@ export function OrdersAdminClient({ initialOrders }: OrdersAdminClientProps) {
               <div className="flex items-center justify-between text-sm mb-1">
                 <span className="text-slate-600">Metodă de plată</span>
                 <Badge variant="outline">{PAYMENT_LABELS[detailOrder.paymentMethod]}</Badge>
+              </div>
+              <div className="flex items-center justify-between text-sm mb-3">
+                <span className="text-slate-600">Status plată</span>
+                <PaymentStatusBadge status={detailOrder.paymentStatus} />
               </div>
               <div className="flex items-center justify-between font-semibold text-slate-900">
                 <span>Total</span>
