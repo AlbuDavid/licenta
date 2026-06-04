@@ -27,6 +27,7 @@ export default async function Home() {
 
   try {
     featuredProducts = await db.product.findMany({
+      where: { active: true },
       take: 4,
       orderBy: { createdAt: "desc" },
       select: {

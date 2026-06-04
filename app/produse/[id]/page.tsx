@@ -10,7 +10,7 @@ interface ProductPageProps {
 export async function generateMetadata({ params }: ProductPageProps) {
   const { id } = await params;
   try {
-    const product = await db.product.findUniqueOrThrow({ where: { id } });
+    const product = await db.product.findFirstOrThrow({ where: { id, active: true } });
     return {
       title: `${product.name} — The White Laser`,
       description:
@@ -29,10 +29,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
   let relatedProducts;
 
   try {
-    product = await db.product.findUniqueOrThrow({ where: { id } });
+    product = await db.product.findFirstOrThrow({ where: { id, active: true } });
 
     relatedProducts = await db.product.findMany({
-      where: { category: product.category, id: { not: id } },
+      where: { category: product.category, id: { not: id }, active: true },
       take: 4,
       orderBy: { createdAt: "desc" },
     });

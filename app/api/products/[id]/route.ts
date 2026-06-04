@@ -9,7 +9,7 @@ export async function GET(_req: Request, context: RouteContext) {
   const { id } = await context.params;
 
   try {
-    const product = await db.product.findUniqueOrThrow({ where: { id } });
+    const product = await db.product.findFirstOrThrow({ where: { id, active: true } });
     return NextResponse.json(product);
   } catch (error) {
     console.error("[GET /api/products/:id]", error);

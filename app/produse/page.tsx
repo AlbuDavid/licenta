@@ -57,6 +57,7 @@ async function getProducts(searchParams: SearchParams): Promise<ProductsResult> 
   const sort = searchParams.sort ?? "default";
 
   const where = {
+    active: true,
     ...(activeCategories.length > 0 && { category: { in: activeCategories } }),
     ...(onlyCustomizable && { isCustomizable: true }),
   };

@@ -18,6 +18,7 @@ export async function GET(_req: Request, context: RouteContext) {
       where: {
         category: product.category,
         id: { not: id },
+        active: true,
       },
       take: 4,
       orderBy: { createdAt: "desc" },
