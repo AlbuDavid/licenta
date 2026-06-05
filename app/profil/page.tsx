@@ -33,7 +33,6 @@ export default async function ProfilPage() {
       shippingPostal: true,
       orders: {
         orderBy: { createdAt: "desc" },
-        take: 5,
         select: {
           id: true,
           status: true,

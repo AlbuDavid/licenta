@@ -45,9 +45,11 @@ next-env.d.ts
 
 /lib/generated/prisma
 
-# User-uploaded design files
+# User-uploaded files (runtime-generated, not committed)
 /public/uploads/designs/*
 !/public/uploads/designs/.gitkeep
+/public/uploads/products/*
+!/public/uploads/products/.gitkeep
 .claude/
 claude.md
 DEVLOG.local.md

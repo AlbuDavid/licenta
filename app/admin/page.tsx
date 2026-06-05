@@ -6,7 +6,6 @@ import {
   Sparkles,
   ShoppingCart,
   Clock,
-  TrendingUp,
   Users,
 } from "lucide-react";
 import { db } from "@/lib/db";
@@ -23,6 +22,7 @@ import { StatusBadge } from "@/components/admin/StatusBadge";
 import type { OrderStatus } from "@/components/admin/StatusBadge";
 import { RevenueChart } from "@/components/admin/RevenueChart";
 import type { DayRevenue } from "@/components/admin/RevenueChart";
+import { RevenueStatCard } from "@/components/admin/RevenueStatCard";
 
 interface DashboardStats {
   totalProducts: number;
@@ -268,13 +268,7 @@ export default async function AdminDashboardPage() {
           href="/admin/orders?status=PENDING"
           accent="amber"
         />
-        <StatCard
-          label="Venituri totale"
-          value={formatPrice(stats.totalRevenue)}
-          icon={TrendingUp}
-          href="/admin/orders"
-          accent="emerald"
-        />
+        <RevenueStatCard initialRevenue={stats.totalRevenue} />
         <StatCard
           label="Utilizatori"
           value={stats.totalUsers}

@@ -1,11 +1,17 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ShoppingBag } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 
 export function CartButton() {
   const { openCart, totalItems } = useCartStore();
   const count = totalItems();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <button
@@ -14,7 +20,7 @@ export function CartButton() {
       aria-label="Deschide coșul"
     >
       <ShoppingBag className="size-5" />
-      {count > 0 && (
+      {mounted && count > 0 && (
         <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
           {count > 99 ? "99+" : count}
         </span>

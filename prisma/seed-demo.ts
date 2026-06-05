@@ -1,4 +1,5 @@
 import "dotenv/config";
+import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../lib/generated/prisma/client.ts";
 
@@ -8,111 +9,84 @@ const prisma = new PrismaClient({ adapter });
 const daysAgo = (n: number): Date =>
   new Date(Date.now() - n * 24 * 60 * 60 * 1000);
 
-const DEMO_EMAILS = [
-  "maria.ionescu@example.ro",
-  "alex.popa@example.ro",
-  "elena.dumitrescu@example.ro",
-  "mihai.constantin@example.ro",
-  "ana.gheorghiu@example.ro",
+export const DEMO_EMAILS = Array.from({ length: 10 }, (_, i) => `user${i + 1}@example.ro`);
+
+// user1–2 → 1 order each | user3–4 → 2 orders each | user5–10 → 3 orders each
+const ORDER_COUNTS: Record<string, number> = {
+  "user1@example.ro": 1,
+  "user2@example.ro": 1,
+  "user3@example.ro": 2,
+  "user4@example.ro": 2,
+  "user5@example.ro": 3,
+  "user6@example.ro": 3,
+  "user7@example.ro": 3,
+  "user8@example.ro": 3,
+  "user9@example.ro": 3,
+  "user10@example.ro": 3,
+};
+
+const CITIES = [
+  { city: "București",  county: "Ilfov",    postal: "010001" },
+  { city: "Cluj-Napoca", county: "Cluj",    postal: "400100" },
+  { city: "Timișoara",  county: "Timiș",    postal: "300001" },
+  { city: "Iași",       county: "Iași",     postal: "700001" },
+  { city: "Brașov",     county: "Brașov",   postal: "500001" },
+  { city: "Constanța",  county: "Constanța",postal: "900001" },
+  { city: "Craiova",    county: "Dolj",     postal: "200001" },
+  { city: "Galați",     county: "Galați",   postal: "800001" },
+  { city: "Oradea",     county: "Bihor",    postal: "410001" },
+  { city: "Sibiu",      county: "Sibiu",    postal: "550001" },
 ];
 
-async function main() {
-  console.log("Seeding 5 demo users + orders...");
+const STATUSES = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"] as const;
+const METHODS  = ["CARD", "CASH_ON_DELIVERY"] as const;
 
-  // ── 1. Upsert demo users ─────────────────────────────────────────────────
-  const [maria, alex, elena, mihai, ana] = await Promise.all([
-    prisma.user.upsert({
-      where: { email: "maria.ionescu@example.ro" },
-      update: { name: "Maria Ionescu" },
-      create: {
-        email: "maria.ionescu@example.ro",
-        name: "Maria Ionescu",
-        emailVerified: new Date(),
-        role: "USER",
-        phone: "0721100001",
-        shippingAddress: "Str. Florilor nr. 3, ap. 5",
-        shippingCity: "București",
-        shippingCounty: "Ilfov",
-        shippingPostal: "010001",
-      },
-    }),
-    prisma.user.upsert({
-      where: { email: "alex.popa@example.ro" },
-      update: { name: "Alexandru Popa" },
-      create: {
-        email: "alex.popa@example.ro",
-        name: "Alexandru Popa",
-        emailVerified: new Date(),
-        role: "USER",
-        phone: "0721100002",
-        shippingAddress: "Str. Victoriei nr. 15",
-        shippingCity: "Cluj-Napoca",
-        shippingCounty: "Cluj",
-        shippingPostal: "400100",
-      },
-    }),
-    prisma.user.upsert({
-      where: { email: "elena.dumitrescu@example.ro" },
-      update: { name: "Elena Dumitrescu" },
-      create: {
-        email: "elena.dumitrescu@example.ro",
-        name: "Elena Dumitrescu",
-        emailVerified: new Date(),
-        role: "USER",
-        phone: "0721100003",
-        shippingAddress: "Bd. Unirii nr. 7",
-        shippingCity: "Timișoara",
-        shippingCounty: "Timiș",
-        shippingPostal: "300001",
-      },
-    }),
-    prisma.user.upsert({
-      where: { email: "mihai.constantin@example.ro" },
-      update: { name: "Mihai Constantin" },
-      create: {
-        email: "mihai.constantin@example.ro",
-        name: "Mihai Constantin",
-        emailVerified: new Date(),
-        role: "USER",
-        phone: "0721100004",
-        shippingAddress: "Str. Independenței nr. 22",
-        shippingCity: "Iași",
-        shippingCounty: "Iași",
-        shippingPostal: "700001",
-      },
-    }),
-    prisma.user.upsert({
-      where: { email: "ana.gheorghiu@example.ro" },
-      update: { name: "Ana Gheorghiu" },
-      create: {
-        email: "ana.gheorghiu@example.ro",
-        name: "Ana Gheorghiu",
-        emailVerified: new Date(),
-        role: "USER",
-        phone: "0721100005",
-        shippingAddress: "Str. Libertății nr. 5",
-        shippingCity: "Brașov",
-        shippingCounty: "Brașov",
-        shippingPostal: "500001",
-      },
-    }),
-  ]);
+const DEMO_PASSWORD = "Demo1234!";
+
+async function main() {
+  console.log("Seeding 10 demo users + orders...");
+
+  const hashedPassword = await bcrypt.hash(DEMO_PASSWORD, 10);
+
+  // ── 1. Upsert users ──────────────────────────────────────────────────────────
+  const users = await Promise.all(
+    DEMO_EMAILS.map((email, i) => {
+      const n = i + 1;
+      const loc = CITIES[i];
+      return prisma.user.upsert({
+        where: { email },
+        update: { name: `User${n}`, password: hashedPassword },
+        create: {
+          email,
+          name: `User${n}`,
+          password: hashedPassword,
+          emailVerified: new Date(),
+          role: "USER",
+          phone: `072110${String(n).padStart(4, "0")}`,
+          shippingAddress: `Str. Exemplu nr. ${n}`,
+          shippingCity: loc.city,
+          shippingCounty: loc.county,
+          shippingPostal: loc.postal,
+        },
+      });
+    })
+  );
 
   console.log("Users ready.");
 
-  // ── 2. Skip if demo orders already exist (idempotency) ───────────────────
+  // ── 2. Skip if demo orders already exist ────────────────────────────────────
   const existingCount = await prisma.order.count({
     where: { customerEmail: { in: DEMO_EMAILS } },
   });
 
   if (existingCount > 0) {
     console.log(
-      `${existingCount} demo orders already exist — skipping. Run with --force to reset.`
+      `${existingCount} demo orders already exist — skipping. Delete them manually to reset.`
     );
     return;
   }
 
-  // ── 3. Fetch real product IDs ─────────────────────────────────────────────
+  // ── 3. Fetch real product IDs ────────────────────────────────────────────────
   const products = await prisma.product.findMany({
     where: { active: true },
     select: { id: true, name: true, price: true },
@@ -123,264 +97,62 @@ async function main() {
     process.exit(1);
   }
 
-  const find = (keyword: string) =>
-    products.find((p) =>
-      p.name.toLowerCase().includes(keyword.toLowerCase())
-    ) ?? products[0];
+  const pick = (offset: number) => products[offset % products.length];
 
-  const tablou     = find("Tablou Ardezie Poza");
-  const familie    = find("Familie");
-  const inima      = find("Inimă");
-  const breloc     = find("Breloc");
-  const rotund     = find("Rotund");
-  const patrat     = find("Pătrat");
-  const coperta    = find("Copertă");
-  const pix        = find("Pix");
+  // ── 4. Create orders ─────────────────────────────────────────────────────────
+  // Spread dates across last 30 days; rotate statuses and methods deterministically.
+  let orderIndex = 0;
 
-  // ── 4. Define 10 orders spanning the last 30 days ────────────────────────
-  // Mix of statuses, products, quantities, and payment methods to make
-  // the dashboard revenue chart, top-products list, and recent-orders full.
+  for (const user of users) {
+    const count = ORDER_COUNTS[user.email];
+    const loc = CITIES[users.indexOf(user)];
 
-  type Item = { productId: string; productName: string; price: number; quantity: number };
+    for (let j = 0; j < count; j++) {
+      const statusIdx = orderIndex % STATUSES.length;
+      const methodIdx = orderIndex % METHODS.length;
+      const daysAgoN  = Math.round(30 - (orderIndex / 24) * 30); // spread evenly over 30d
 
-  const orders: {
-    userId: string;
-    customerName: string;
-    customerEmail: string;
-    customerPhone: string;
-    shippingAddress: string;
-    shippingCity: string;
-    shippingCounty: string;
-    shippingPostal: string;
-    paymentMethod: "CARD" | "CASH_ON_DELIVERY";
-    status: "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
-    daysAgoN: number;
-    items: Item[];
-  }[] = [
-    // — Maria, 28 d ago, DELIVERED
-    {
-      userId: maria.id,
-      customerName: "Maria Ionescu",
-      customerEmail: "maria.ionescu@example.ro",
-      customerPhone: "0721100001",
-      shippingAddress: "Str. Florilor nr. 3, ap. 5",
-      shippingCity: "București",
-      shippingCounty: "Ilfov",
-      shippingPostal: "010001",
-      paymentMethod: "CARD",
-      status: "DELIVERED",
-      daysAgoN: 28,
-      items: [
-        { productId: tablou.id, productName: tablou.name, price: tablou.price, quantity: 1 },
-        { productId: breloc.id, productName: breloc.name, price: breloc.price, quantity: 2 },
-      ],
-    },
-    // — Alexandru, 25 d ago, DELIVERED
-    {
-      userId: alex.id,
-      customerName: "Alexandru Popa",
-      customerEmail: "alex.popa@example.ro",
-      customerPhone: "0721100002",
-      shippingAddress: "Str. Victoriei nr. 15",
-      shippingCity: "Cluj-Napoca",
-      shippingCounty: "Cluj",
-      shippingPostal: "400100",
-      paymentMethod: "CASH_ON_DELIVERY",
-      status: "DELIVERED",
-      daysAgoN: 25,
-      items: [
-        { productId: familie.id, productName: familie.name, price: familie.price, quantity: 1 },
-        { productId: patrat.id, productName: patrat.name, price: patrat.price, quantity: 2 },
-      ],
-    },
-    // — Elena, 22 d ago, DELIVERED
-    {
-      userId: elena.id,
-      customerName: "Elena Dumitrescu",
-      customerEmail: "elena.dumitrescu@example.ro",
-      customerPhone: "0721100003",
-      shippingAddress: "Bd. Unirii nr. 7",
-      shippingCity: "Timișoara",
-      shippingCounty: "Timiș",
-      shippingPostal: "300001",
-      paymentMethod: "CARD",
-      status: "DELIVERED",
-      daysAgoN: 22,
-      items: [
-        { productId: inima.id, productName: inima.name, price: inima.price, quantity: 3 },
-      ],
-    },
-    // — Maria, 20 d ago, DELIVERED
-    {
-      userId: maria.id,
-      customerName: "Maria Ionescu",
-      customerEmail: "maria.ionescu@example.ro",
-      customerPhone: "0721100001",
-      shippingAddress: "Str. Florilor nr. 3, ap. 5",
-      shippingCity: "București",
-      shippingCounty: "Ilfov",
-      shippingPostal: "010001",
-      paymentMethod: "CARD",
-      status: "DELIVERED",
-      daysAgoN: 20,
-      items: [
-        { productId: coperta.id, productName: coperta.name, price: coperta.price, quantity: 1 },
-        { productId: pix.id, productName: pix.name, price: pix.price, quantity: 2 },
-      ],
-    },
-    // — Alexandru, 17 d ago, SHIPPED
-    {
-      userId: alex.id,
-      customerName: "Alexandru Popa",
-      customerEmail: "alex.popa@example.ro",
-      customerPhone: "0721100002",
-      shippingAddress: "Str. Victoriei nr. 15",
-      shippingCity: "Cluj-Napoca",
-      shippingCounty: "Cluj",
-      shippingPostal: "400100",
-      paymentMethod: "CASH_ON_DELIVERY",
-      status: "SHIPPED",
-      daysAgoN: 17,
-      items: [
-        { productId: rotund.id, productName: rotund.name, price: rotund.price, quantity: 2 },
-        { productId: pix.id, productName: pix.name, price: pix.price, quantity: 1 },
-      ],
-    },
-    // — Mihai, 14 d ago, SHIPPED
-    {
-      userId: mihai.id,
-      customerName: "Mihai Constantin",
-      customerEmail: "mihai.constantin@example.ro",
-      customerPhone: "0721100004",
-      shippingAddress: "Str. Independenței nr. 22",
-      shippingCity: "Iași",
-      shippingCounty: "Iași",
-      shippingPostal: "700001",
-      paymentMethod: "CARD",
-      status: "SHIPPED",
-      daysAgoN: 14,
-      items: [
-        { productId: tablou.id, productName: tablou.name, price: tablou.price, quantity: 1 },
-        { productId: inima.id, productName: inima.name, price: inima.price, quantity: 1 },
-      ],
-    },
-    // — Elena, 10 d ago, PROCESSING
-    {
-      userId: elena.id,
-      customerName: "Elena Dumitrescu",
-      customerEmail: "elena.dumitrescu@example.ro",
-      customerPhone: "0721100003",
-      shippingAddress: "Bd. Unirii nr. 7",
-      shippingCity: "Timișoara",
-      shippingCounty: "Timiș",
-      shippingPostal: "300001",
-      paymentMethod: "CASH_ON_DELIVERY",
-      status: "PROCESSING",
-      daysAgoN: 10,
-      items: [
-        { productId: breloc.id, productName: breloc.name, price: breloc.price, quantity: 3 },
-        { productId: pix.id, productName: pix.name, price: pix.price, quantity: 2 },
-      ],
-    },
-    // — Ana, 7 d ago, PROCESSING
-    {
-      userId: ana.id,
-      customerName: "Ana Gheorghiu",
-      customerEmail: "ana.gheorghiu@example.ro",
-      customerPhone: "0721100005",
-      shippingAddress: "Str. Libertății nr. 5",
-      shippingCity: "Brașov",
-      shippingCounty: "Brașov",
-      shippingPostal: "500001",
-      paymentMethod: "CARD",
-      status: "PROCESSING",
-      daysAgoN: 7,
-      items: [
-        { productId: familie.id, productName: familie.name, price: familie.price, quantity: 1 },
-        { productId: patrat.id, productName: patrat.name, price: patrat.price, quantity: 1 },
-      ],
-    },
-    // — Mihai, 4 d ago, PENDING
-    {
-      userId: mihai.id,
-      customerName: "Mihai Constantin",
-      customerEmail: "mihai.constantin@example.ro",
-      customerPhone: "0721100004",
-      shippingAddress: "Str. Independenței nr. 22",
-      shippingCity: "Iași",
-      shippingCounty: "Iași",
-      shippingPostal: "700001",
-      paymentMethod: "CASH_ON_DELIVERY",
-      status: "PENDING",
-      daysAgoN: 4,
-      items: [
-        { productId: inima.id, productName: inima.name, price: inima.price, quantity: 2 },
-        { productId: rotund.id, productName: rotund.name, price: rotund.price, quantity: 1 },
-      ],
-    },
-    // — Ana, 2 d ago, PENDING
-    {
-      userId: ana.id,
-      customerName: "Ana Gheorghiu",
-      customerEmail: "ana.gheorghiu@example.ro",
-      customerPhone: "0721100005",
-      shippingAddress: "Str. Libertății nr. 5",
-      shippingCity: "Brașov",
-      shippingCounty: "Brașov",
-      shippingPostal: "500001",
-      paymentMethod: "CARD",
-      status: "PENDING",
-      daysAgoN: 2,
-      items: [
-        { productId: tablou.id, productName: tablou.name, price: tablou.price, quantity: 1 },
-        { productId: coperta.id, productName: coperta.name, price: coperta.price, quantity: 1 },
-      ],
-    },
-  ];
+      const p1 = pick(orderIndex);
+      const p2 = pick(orderIndex + 3);
 
-  // ── 5. Insert orders sequentially ────────────────────────────────────────
-  for (const spec of orders) {
-    const total =
-      Math.round(
-        spec.items.reduce((s, i) => s + i.price * i.quantity, 0) * 100
-      ) / 100;
+      const items = [
+        { productId: p1.id, productName: p1.name, price: p1.price, quantity: 1 },
+        { productId: p2.id, productName: p2.name, price: p2.price, quantity: j + 1 },
+      ];
 
-    const ts = daysAgo(spec.daysAgoN);
+      const total =
+        Math.round(items.reduce((s, i) => s + i.price * i.quantity, 0) * 100) / 100;
 
-    await prisma.order.create({
-      data: {
-        userId: spec.userId,
-        customerName: spec.customerName,
-        customerEmail: spec.customerEmail,
-        customerPhone: spec.customerPhone,
-        shippingAddress: spec.shippingAddress,
-        shippingCity: spec.shippingCity,
-        shippingCounty: spec.shippingCounty,
-        shippingPostal: spec.shippingPostal,
-        paymentMethod: spec.paymentMethod,
-        status: spec.status,
-        total,
-        createdAt: ts,
-        updatedAt: ts,
-        items: {
-          create: spec.items.map((item) => ({
-            productId: item.productId,
-            productName: item.productName,
-            price: item.price,
-            quantity: item.quantity,
-          })),
+      const ts = daysAgo(Math.max(1, daysAgoN));
+
+      await prisma.order.create({
+        data: {
+          userId:          user.id,
+          customerName:    user.name ?? user.email,
+          customerEmail:   user.email,
+          customerPhone:   user.phone ?? "0700000000",
+          shippingAddress: loc.city + " str. Exemplu",
+          shippingCity:    loc.city,
+          shippingCounty:  loc.county,
+          shippingPostal:  loc.postal,
+          paymentMethod:   METHODS[methodIdx],
+          status:          STATUSES[statusIdx],
+          total,
+          createdAt: ts,
+          updatedAt: ts,
+          items: { create: items },
         },
-      },
-    });
+      });
+
+      orderIndex++;
+    }
   }
 
-  console.log(`Created ${orders.length} demo orders across the last 30 days.`);
+  // Total: 2×1 + 2×2 + 6×3 = 24 orders
+  console.log(`Created ${orderIndex} demo orders.`);
   console.log("Done. Refresh the admin panel to see the changes.");
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
+  .catch((e) => { console.error(e); process.exit(1); })
   .finally(() => prisma.$disconnect());

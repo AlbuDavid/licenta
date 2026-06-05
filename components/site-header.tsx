@@ -109,15 +109,6 @@ export function SiteHeader() {
 
               <NavigationMenuItem>
                 <NavigationMenuLink
-                  href="/portofoliu"
-                  className={navigationMenuTriggerStyle()}
-                >
-                  Portofoliu
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-
-              <NavigationMenuItem>
-                <NavigationMenuLink
                   href="/editor"
                   className={navigationMenuTriggerStyle()}
                 >

@@ -51,9 +51,6 @@ export function AuthNav() {
         <DropdownMenuItem asChild>
           <Link href="/profil">Profilul meu</Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/comenzi">Comenzile mele</Link>
-        </DropdownMenuItem>
         {session.user.role === "ADMIN" && (
           <>
             <DropdownMenuSeparator />

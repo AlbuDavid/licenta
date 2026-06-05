@@ -47,7 +47,7 @@ interface Order {
   id: string;
   status: OrderStatus;
   paymentMethod: "CASH_ON_DELIVERY" | "CARD";
-  paymentStatus: PaymentStatus;
+  paymentStatus: PaymentStatus | null;
   total: number;
   customerName: string;
   customerEmail: string;
@@ -76,8 +76,9 @@ const PAYMENT_STATUS_CONFIG: Record<PaymentStatus, { label: string; className: s
   REFUNDED: { label: "Rambursată",   className: "bg-amber-50 text-amber-700 border-amber-200" },
 };
 
-function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
-  const cfg = PAYMENT_STATUS_CONFIG[status];
+function PaymentStatusBadge({ status }: { status: PaymentStatus | null | undefined }) {
+  const cfg = status ? PAYMENT_STATUS_CONFIG[status] : undefined;
+  if (!cfg) return null;
   return (
     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${cfg.className}`}>
       {cfg.label}

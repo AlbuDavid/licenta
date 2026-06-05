@@ -100,6 +100,13 @@ export function ProfileClient({ user, recentOrders }: ProfileData) {
   const [passwordStatus, setPasswordStatus] = useState<SaveStatus>("idle");
   const [passwordError, setPasswordError] = useState("");
 
+  // ── Comenzi recente ──
+  const [showAllOrders, setShowAllOrders] = useState(false);
+  const RECENT_ORDERS_LIMIT = 3;
+  const visibleOrders = showAllOrders
+    ? recentOrders
+    : recentOrders.slice(0, RECENT_ORDERS_LIMIT);
+
   const memberSince = new Date(user.createdAt).toLocaleDateString("ro-RO", {
     month: "long",
     year: "numeric",
@@ -398,11 +405,21 @@ export function ProfileClient({ user, recentOrders }: ProfileData) {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-base">Comenzi recente</CardTitle>
-                <CardDescription>Ultimele tale 5 comenzi.</CardDescription>
+                <CardDescription>
+                  {showAllOrders
+                    ? `Toate comenzile tale (${recentOrders.length}).`
+                    : `Ultimele tale ${Math.min(RECENT_ORDERS_LIMIT, recentOrders.length)} comenzi.`}
+                </CardDescription>
               </div>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/comenzi">Toate comenzile</Link>
-              </Button>
+              {recentOrders.length > RECENT_ORDERS_LIMIT && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAllOrders((prev) => !prev)}
+                >
+                  {showAllOrders ? "Arată mai puține" : "Toate comenzile"}
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               {recentOrders.length === 0 ? (
@@ -415,7 +432,7 @@ export function ProfileClient({ user, recentOrders }: ProfileData) {
                 </div>
               ) : (
                 <ul className="divide-y divide-slate-100">
-                  {recentOrders.map((order) => (
+                  {visibleOrders.map((order) => (
                     <li key={order.id} className="flex items-center justify-between gap-4 py-3">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-slate-900 font-mono">
