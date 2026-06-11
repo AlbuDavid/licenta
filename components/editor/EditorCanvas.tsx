@@ -34,7 +34,7 @@ export default function EditorCanvas() {
   useHistory();
   useDrawingMode();
   useSelectionBehavior();
-  usePreviewMode("slate");
+  usePreviewMode();
   usePenTool();
 
   return (

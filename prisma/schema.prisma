@@ -38,6 +38,20 @@ enum PaymentStatus {
   REFUNDED
 }
 
+/// Boundary shape used by the editor's product template (engraving area)
+enum TemplateShape {
+  CIRCLE
+  SQUARE
+  HEART
+  RECTANGLE
+}
+
+/// Physical material of the blank — drives the engraving preview simulation
+enum Material {
+  SLATE
+  WOOD
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -110,6 +124,17 @@ model Product {
   active          Boolean          @default(true)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+
+  // ── Engraving template config (editor) ─────────────────────────────────
+  // A product appears in the editor's template dropdown only when shape,
+  // dimensions and material are all set (and the product is active).
+  templateShape    TemplateShape?
+  templateWidthMm  Float?
+  templateHeightMm Float?
+  material         Material?
+  /// Top-down photo of the blank (unengraved) product — preview surface
+  blankPhotoUrl    String?
+
   uploadedDesigns UploadedDesign[]
   orderItems      OrderItem[]
 }

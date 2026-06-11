@@ -30,6 +30,13 @@ export function useFabricCanvas(
     const containerEl = containerRef.current;
     if (!canvasEl || !containerEl) return;
 
+    // Serialize obj.data (template tags, product config, preview originals)
+    // in every toObject()/toJSON() call — history snapshots and saved designs
+    // rely on it surviving loadFromJSON round-trips.
+    if (!fabric.FabricObject.customProperties.includes("data")) {
+      fabric.FabricObject.customProperties.push("data");
+    }
+
     const W = containerEl.clientWidth  || 960;
     const H = containerEl.clientHeight || 620;
 

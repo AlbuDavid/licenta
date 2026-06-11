@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { useEditorStore } from "@/store/editorStore";
+import {
+  applyPreviewToCanvas,
+  restoreDesignState,
+} from "@/hooks/usePreviewMode";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -16,6 +20,8 @@ type SaveStatus = "idle" | "saving" | "saved" | "error";
  *
  * Objects with `excludeFromExport: true` (snap guide lines) are stripped
  * before serialization so they are never persisted to the database.
+ * Saving during preview mode persists the DESIGN state (original colours,
+ * original image elements) — preview styling is restored right after.
  */
 export function useSave() {
   const canvas = useEditorStore((s) => s.canvas);
@@ -23,6 +29,10 @@ export function useSave() {
 
   async function save(name = "Design fără titlu") {
     if (!canvas || status === "saving") return;
+
+    // Never persist preview-filtered colours / dithered image elements
+    const wasPreview = useEditorStore.getState().mode === "preview";
+    if (wasPreview) restoreDesignState(canvas);
 
     // Serialize, stripping transient objects
     const raw = canvas.toJSON() as {
@@ -32,6 +42,8 @@ export function useSave() {
       raw.objects = raw.objects.filter((o) => !o.excludeFromExport);
     }
     const canvasJson = JSON.stringify(raw);
+
+    if (wasPreview) void applyPreviewToCanvas(canvas);
 
     setStatus("saving");
     try {

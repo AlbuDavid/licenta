@@ -37,6 +37,11 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { formatPrice } from "@/lib/utils";
+import { SHAPE_LABELS_RO, MATERIAL_LABELS_RO } from "@/lib/template-config";
+import type {
+  TemplateShape as DbTemplateShape,
+  Material as DbMaterial,
+} from "@/lib/generated/prisma/client";
 
 interface Product {
   id: string;
@@ -48,6 +53,11 @@ interface Product {
   isCustomizable: boolean;
   active: boolean;
   createdAt: Date;
+  templateShape: DbTemplateShape | null;
+  templateWidthMm: number | null;
+  templateHeightMm: number | null;
+  material: DbMaterial | null;
+  blankPhotoUrl: string | null;
   _count: { orderItems: number };
 }
 
@@ -57,6 +67,9 @@ interface ProductsAdminClientProps {
 
 const DEFAULT_CATEGORIES = ["Ardezie", "Lemn", "Metal", "General"];
 
+/** "none" sentinel — Radix Select items cannot have an empty-string value. */
+const NO_SHAPE = "none";
+
 const emptyForm = {
   name: "",
   description: "",
@@ -64,6 +77,11 @@ const emptyForm = {
   imageUrl: "",
   category: "General",
   isCustomizable: false,
+  templateShape: NO_SHAPE as DbTemplateShape | typeof NO_SHAPE,
+  templateWidthMm: "",
+  templateHeightMm: "",
+  material: "SLATE" as DbMaterial,
+  blankPhotoUrl: "",
 };
 
 type FormState = typeof emptyForm;
@@ -115,6 +133,8 @@ export function ProductsAdminClient({
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const [blankUploading, setBlankUploading] = useState(false);
+  const blankFileRef = useRef<HTMLInputElement>(null);
 
   // Merge hardcoded defaults with categories that already exist in the product list
   const allCategories = useMemo(() => {
@@ -188,6 +208,11 @@ export function ProductsAdminClient({
       imageUrl: p.imageUrl ?? "",
       category: p.category,
       isCustomizable: p.isCustomizable,
+      templateShape: p.templateShape ?? NO_SHAPE,
+      templateWidthMm: p.templateWidthMm !== null ? String(p.templateWidthMm) : "",
+      templateHeightMm: p.templateHeightMm !== null ? String(p.templateHeightMm) : "",
+      material: p.material ?? "SLATE",
+      blankPhotoUrl: p.blankPhotoUrl ?? "",
     });
     setPreviewUrl(p.imageUrl ?? "");
     setError("");
@@ -218,12 +243,42 @@ export function ProductsAdminClient({
     }
   }
 
+  /** Same upload endpoint as the product image — stores the blank photo URL. */
+  async function uploadBlankPhoto(file: File) {
+    setBlankUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/admin/products/upload-image", {
+        method: "POST",
+        body: fd,
+      });
+      const data: { imageUrl?: string; error?: string } = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Eroare la upload");
+      patchForm("blankPhotoUrl", data.imageUrl!);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Eroare la upload");
+    } finally {
+      setBlankUploading(false);
+    }
+  }
+
   async function handleSave(isEdit: boolean) {
     setError("");
     if (!form.name.trim() || !form.price || !form.category) {
       setError("Completează numele, prețul și categoria.");
       return;
     }
+
+    // Template config is all-or-nothing: a shape requires valid dimensions
+    const hasTemplate = form.templateShape !== NO_SHAPE;
+    const widthMm = parseFloat(form.templateWidthMm);
+    const heightMm = parseFloat(form.templateHeightMm);
+    if (hasTemplate && (!(widthMm > 0) || !(heightMm > 0))) {
+      setError("Șablonul de gravare necesită lățime și înălțime valide (mm).");
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
@@ -233,6 +288,11 @@ export function ProductsAdminClient({
         imageUrl: form.imageUrl || undefined,
         category: form.category,
         isCustomizable: form.isCustomizable,
+        templateShape: hasTemplate ? form.templateShape : null,
+        templateWidthMm: hasTemplate ? widthMm : null,
+        templateHeightMm: hasTemplate ? heightMm : null,
+        material: hasTemplate ? form.material : null,
+        blankPhotoUrl: hasTemplate && form.blankPhotoUrl ? form.blankPhotoUrl : null,
       };
 
       if (isEdit && editTarget) {
@@ -544,7 +604,7 @@ export function ProductsAdminClient({
           }
         }}
       >
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editTarget ? "Editează produs" : "Produs nou"}
@@ -665,6 +725,164 @@ export function ProductsAdminClient({
               <Label htmlFor="p-custom" className="cursor-pointer">
                 Permite personalizare
               </Label>
+            </div>
+
+            <Separator />
+
+            {/* Engraving template config (editor) */}
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-slate-700">
+                  Șablon de gravare (editor)
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Produsele cu șablon complet apar în lista de șabloane din
+                  editor.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-shape">Formă</Label>
+                  <Select
+                    value={form.templateShape}
+                    onValueChange={(v) => patchForm("templateShape", v)}
+                  >
+                    <SelectTrigger id="p-shape">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_SHAPE}>Fără șablon</SelectItem>
+                      {(
+                        Object.entries(SHAPE_LABELS_RO) as [
+                          DbTemplateShape,
+                          string,
+                        ][]
+                      ).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-material">Material</Label>
+                  <Select
+                    value={form.material}
+                    onValueChange={(v) => patchForm("material", v)}
+                    disabled={form.templateShape === NO_SHAPE}
+                  >
+                    <SelectTrigger id="p-material">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(
+                        Object.entries(MATERIAL_LABELS_RO) as [
+                          DbMaterial,
+                          string,
+                        ][]
+                      ).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-width">Lățime (mm)</Label>
+                  <Input
+                    id="p-width"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={form.templateWidthMm}
+                    onChange={(e) => patchForm("templateWidthMm", e.target.value)}
+                    placeholder="200"
+                    disabled={form.templateShape === NO_SHAPE}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-height">Înălțime (mm)</Label>
+                  <Input
+                    id="p-height"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={form.templateHeightMm}
+                    onChange={(e) => patchForm("templateHeightMm", e.target.value)}
+                    placeholder="300"
+                    disabled={form.templateShape === NO_SHAPE}
+                  />
+                </div>
+              </div>
+
+              {/* Blank photo upload — preview surface in the editor */}
+              {form.templateShape !== NO_SHAPE && (
+                <div className="flex items-center gap-4">
+                  <div
+                    className="size-20 rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center bg-slate-50 overflow-hidden cursor-pointer hover:border-slate-400 transition-colors shrink-0"
+                    onClick={() => blankFileRef.current?.click()}
+                  >
+                    {blankUploading ? (
+                      <Loader2
+                        size={20}
+                        className="animate-spin text-slate-400"
+                      />
+                    ) : form.blankPhotoUrl ? (
+                      <Image
+                        src={form.blankPhotoUrl}
+                        alt="blank preview"
+                        width={80}
+                        height={80}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <ImageIcon size={20} className="text-slate-300" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-700">
+                      Fotografie blank (pentru previzualizare)
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Poză de sus a produsului negravat · JPG, PNG sau WEBP ·
+                      max 5 MB
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => blankFileRef.current?.click()}
+                        disabled={blankUploading}
+                      >
+                        {blankUploading ? "Se încarcă..." : "Selectează fișier"}
+                      </Button>
+                      {form.blankPhotoUrl && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-slate-500"
+                          onClick={() => patchForm("blankPhotoUrl", "")}
+                        >
+                          Elimină
+                        </Button>
+                      )}
+                    </div>
+                    <input
+                      ref={blankFileRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) uploadBlankPhoto(f);
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {error && <p className="text-sm text-red-600">{error}</p>}

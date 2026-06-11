@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -19,7 +19,10 @@ import {
   LayoutTemplate,
 } from "lucide-react";
 import { useEditorStore } from "@/store/editorStore";
-import { useProductTemplate, type TemplateShape } from "@/hooks/useProductTemplate";
+import {
+  useProductTemplate,
+  type ProductTemplateConfig,
+} from "@/hooks/useProductTemplate";
 import { useExport } from "@/hooks/useExport";
 import { useSave } from "@/hooks/useSave";
 import { Button } from "@/components/ui/button";
@@ -48,10 +51,36 @@ export function EditorTopBar() {
   const canRedo = historyIndex < historyLength - 1;
   const designThumbnail = useEditorStore((s) => s.designThumbnail);
 
-  const { loadProductTemplate, clearTemplate, TEMPLATES } = useProductTemplate();
+  const { loadProductTemplate, clearTemplate } = useProductTemplate();
   const { exportSVG, exportJSON, generateThumbnail } = useExport();
   const { save, status: saveStatus } = useSave();
   const [templateVal, setTemplateVal] = useState("");
+
+  // Products usable as engraving templates (active + complete config)
+  const [templates, setTemplates] = useState<ProductTemplateConfig[]>([]);
+  const [templatesStatus, setTemplatesStatus] =
+    useState<"loading" | "ready" | "error">("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchTemplates() {
+      try {
+        const res = await fetch("/api/products/templates");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data: ProductTemplateConfig[] = await res.json();
+        if (cancelled) return;
+        setTemplates(data);
+        setTemplatesStatus("ready");
+      } catch (error) {
+        console.error("[EditorTopBar] template list fetch failed", error);
+        if (!cancelled) setTemplatesStatus("error");
+      }
+    }
+    void fetchTemplates();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const saveLabel: Record<typeof saveStatus, string> = {
     idle:   "Salvează (Ctrl+S)",
@@ -182,29 +211,55 @@ export function EditorTopBar() {
 
         <Separator orientation="vertical" className="h-4 bg-slate-600 mx-0.5" />
 
-        {/* Product template selector */}
+        {/* Product template selector — products from the DB */}
         <LayoutTemplate size={13} className="text-slate-400 shrink-0" />
         <Select
           value={templateVal}
           onValueChange={(val) => {
-            if (val === "none") clearTemplate();
-            else loadProductTemplate(val as TemplateShape);
+            if (val === "none") {
+              clearTemplate();
+            } else {
+              const product = templates.find((t) => t.productId === val);
+              if (product) loadProductTemplate(product);
+            }
             setTemplateVal("");
           }}
         >
           <SelectTrigger
-            className="h-7 w-36 text-xs bg-slate-700 border-slate-600
+            className="h-7 w-44 text-xs bg-slate-700 border-slate-600
                        text-slate-300 hover:bg-slate-600 focus:ring-0
                        focus:ring-offset-0"
           >
             <SelectValue placeholder="Șablon…" />
           </SelectTrigger>
           <SelectContent className="bg-slate-800 border-slate-700 text-slate-200">
-            <SelectItem value="none"      className="text-xs focus:bg-slate-700">Fără șablon</SelectItem>
-            <SelectItem value="circle"    className="text-xs focus:bg-slate-700">{TEMPLATES.circle.label}</SelectItem>
-            <SelectItem value="square"    className="text-xs focus:bg-slate-700">{TEMPLATES.square.label}</SelectItem>
-            <SelectItem value="heart"     className="text-xs focus:bg-slate-700">{TEMPLATES.heart.label}</SelectItem>
-            <SelectItem value="rectangle" className="text-xs focus:bg-slate-700">{TEMPLATES.rectangle.label}</SelectItem>
+            <SelectItem value="none" className="text-xs focus:bg-slate-700">
+              Fără șablon
+            </SelectItem>
+            {templatesStatus === "loading" && (
+              <SelectItem value="__loading" disabled className="text-xs text-slate-400">
+                Se încarcă produsele…
+              </SelectItem>
+            )}
+            {templatesStatus === "error" && (
+              <SelectItem value="__error" disabled className="text-xs text-slate-400">
+                Eroare la încărcarea produselor
+              </SelectItem>
+            )}
+            {templatesStatus === "ready" && templates.length === 0 && (
+              <SelectItem value="__empty" disabled className="text-xs text-slate-400">
+                Niciun produs cu șablon
+              </SelectItem>
+            )}
+            {templates.map((t) => (
+              <SelectItem
+                key={t.productId}
+                value={t.productId}
+                className="text-xs focus:bg-slate-700"
+              >
+                {t.name} ({t.widthMm} × {t.heightMm} mm)
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 

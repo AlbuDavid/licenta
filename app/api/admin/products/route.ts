@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import type { TemplateShape, Material } from "@/lib/generated/prisma/client";
 
 function adminOnly() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -30,6 +31,11 @@ interface CreateProductBody {
   imageUrl?: string;
   category: string;
   isCustomizable?: boolean;
+  templateShape?: TemplateShape | null;
+  templateWidthMm?: number | null;
+  templateHeightMm?: number | null;
+  material?: Material | null;
+  blankPhotoUrl?: string | null;
 }
 
 export async function POST(req: NextRequest) {
@@ -38,14 +44,22 @@ export async function POST(req: NextRequest) {
 
   try {
     const body: CreateProductBody = await req.json();
-    const { name, description, price, imageUrl, category, isCustomizable = false } = body;
+    const {
+      name, description, price, imageUrl, category, isCustomizable = false,
+      templateShape = null, templateWidthMm = null, templateHeightMm = null,
+      material = null, blankPhotoUrl = null,
+    } = body;
 
     if (!name?.trim() || !price || !category?.trim()) {
       return NextResponse.json({ error: "Câmpuri obligatorii lipsă." }, { status: 400 });
     }
 
     const product = await db.product.create({
-      data: { name: name.trim(), description, price, imageUrl, category: category.trim(), isCustomizable, active: true },
+      data: {
+        name: name.trim(), description, price, imageUrl, category: category.trim(),
+        isCustomizable, active: true,
+        templateShape, templateWidthMm, templateHeightMm, material, blankPhotoUrl,
+      },
     });
     return NextResponse.json(product, { status: 201 });
   } catch (error) {

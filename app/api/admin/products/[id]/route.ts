@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import type { TemplateShape, Material } from "@/lib/generated/prisma/client";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -19,6 +20,11 @@ interface UpdateProductBody {
   category?: string;
   isCustomizable?: boolean;
   active?: boolean;
+  templateShape?: TemplateShape | null;
+  templateWidthMm?: number | null;
+  templateHeightMm?: number | null;
+  material?: Material | null;
+  blankPhotoUrl?: string | null;
 }
 
 export async function PATCH(req: NextRequest, ctx: RouteContext) {

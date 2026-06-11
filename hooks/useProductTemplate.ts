@@ -3,103 +3,45 @@
 import * as fabric from "fabric";
 import type { TPointerEventInfo } from "fabric";
 import { useEditorStore } from "@/store/editorStore";
-import { buildHeartPathD } from "@/components/editor/utils/heartPath";
+import {
+  buildTemplateBoundary,
+  TEMPLATE_TAG,
+  GHOST_TAG,
+} from "@/components/editor/utils/templateGeometry";
+import type {
+  ProductTemplateConfig,
+  TemplateShape,
+} from "@/lib/template-config";
 
-export type TemplateShape = "circle" | "square" | "heart" | "rectangle";
-
-const TEMPLATES: Record<TemplateShape, { w: number; h: number; label: string }> = {
-  circle:    { w: 100, h: 100, label: "Cerc (⌀ 100 mm)"           },
-  square:    { w: 100, h: 100, label: "Pătrat (100 × 100 mm)"      },
-  heart:     { w: 100, h: 100, label: "Inimă (100 × 100 mm)"       },
-  rectangle: { w: 200, h: 300, label: "Dreptunghi (200 × 300 mm)"  },
-};
-
-export const TEMPLATE_TAG = "__product_template__";
-const GHOST_TAG = "__template_ghost__";
+// Re-exported for the existing importers (snapping, selection sync, preview…)
+export { TEMPLATE_TAG };
+export type { TemplateShape, ProductTemplateConfig };
 
 // Only one placement session can be active at a time across the whole app.
 let cancelActivePlacement: (() => void) | null = null;
-
-/**
- * Builds a boundary shape object at (left, top).
- * Ghost objects are translucent, non-interactive, and excluded from export.
- * Real objects are movable but locked from resize/rotate.
- */
-function buildTemplateShape(
-  shape: TemplateShape,
-  left: number,
-  top: number,
-  isGhost: boolean,
-): fabric.FabricObject {
-  const { w, h } = TEMPLATES[shape];
-
-  const base = {
-    fill:            "transparent" as const,
-    stroke:          "#64748b",
-    strokeWidth:     3,
-    strokeDashArray: [12, 6] as number[],
-    strokeUniform:   true,
-    hasControls:     false,
-    lockScalingX:    true,
-    lockScalingY:    true,
-    lockRotation:    true,
-    lockSkewingX:    true,
-    lockSkewingY:    true,
-  };
-
-  const props = isGhost
-    ? {
-        ...base,
-        selectable:        false,
-        evented:           false,
-        opacity:           0.55,
-        excludeFromExport: true,
-        data:              { tag: GHOST_TAG, shape },
-      }
-    : {
-        ...base,
-        selectable:  true,
-        evented:     true,
-        hoverCursor: "move" as string,
-        data:        { tag: TEMPLATE_TAG, shape },
-      };
-
-  if (shape === "circle") {
-    return new fabric.Circle({ ...props, radius: w / 2, left, top });
-  }
-  if (shape === "heart") {
-    return new fabric.Path(buildHeartPathD(w, h), { ...props, left, top });
-  }
-  return new fabric.Rect({
-    ...props,
-    width:  w,
-    height: h,
-    left,
-    top,
-    rx: shape === "rectangle" ? 8 : 0,
-    ry: shape === "rectangle" ? 8 : 0,
-  });
-}
 
 export function useProductTemplate() {
   const canvas = useEditorStore((s) => s.canvas);
 
   /**
-   * Enters placement mode: a ghost follows the cursor, left-click places the
-   * real boundary at that position, Escape cancels. Any previous in-flight
-   * placement is cancelled first.
+   * Enters placement mode for a product template: a ghost follows the cursor,
+   * left-click places the real boundary at that position, Escape cancels.
+   * Any previous in-flight placement is cancelled first; placing replaces an
+   * already-placed template (one template max — preview/export need a single
+   * unambiguous physical product).
    */
-  function loadProductTemplate(shape: TemplateShape) {
+  function loadProductTemplate(config: ProductTemplateConfig) {
     if (!canvas) return;
 
     // Cancel any previous placement that wasn't finished.
     cancelActivePlacement?.();
 
     const c = canvas;                   // stable non-null ref captured by closures
-    const { w, h } = TEMPLATES[shape];
+    const w = config.widthMm;
+    const h = config.heightMm;
 
     // Ghost starts off-screen; snaps to cursor on first mouse:move.
-    const ghost = buildTemplateShape(shape, -9999, -9999, true);
+    const ghost = buildTemplateBoundary(config, -9999, -9999, true);
     c.add(ghost);
     c.requestRenderAll();
 
@@ -122,11 +64,20 @@ export function useProductTemplate() {
 
       c.remove(ghost);
 
-      const pt  = c.getScenePoint(opt.e);
-      const real = buildTemplateShape(shape, pt.x - w / 2, pt.y - h / 2, false);
-      c.insertAt(0, real);            // behind all user objects
-      c.discardActiveObject();        // cancel any accidental selection from the click
+      // Batch "remove old template + place new" into a single undo step
+      const store = useEditorStore.getState();
+      store.pauseHistory();
+
+      removeTemplateObjects(c);         // one template max — replace existing
+
+      const pt   = c.getScenePoint(opt.e);
+      const real = buildTemplateBoundary(config, pt.x - w / 2, pt.y - h / 2, false);
+      c.insertAt(0, real);              // behind all user objects
+      c.discardActiveObject();          // cancel any accidental selection from the click
       c.requestRenderAll();
+
+      store.resumeHistory();
+      store.takeSnapshot();
 
       cleanup();
     };
@@ -159,15 +110,22 @@ export function useProductTemplate() {
     cancelActivePlacement?.();
 
     if (!canvas) return;
-    canvas
-      .getObjects()
-      .filter((o) => {
-        const d = (o as fabric.FabricObject & { data?: { tag?: string } }).data;
-        return d?.tag === TEMPLATE_TAG || d?.tag === GHOST_TAG;
-      })
-      .forEach((o) => canvas.remove(o));
+    removeTemplateObjects(canvas);
     canvas.requestRenderAll();
   }
 
-  return { loadProductTemplate, clearTemplate, TEMPLATES };
+  return { loadProductTemplate, clearTemplate };
+}
+
+// ── Internal ──────────────────────────────────────────────────────────────────
+
+/** Removes all placed boundaries and ghosts from the canvas. */
+function removeTemplateObjects(canvas: fabric.Canvas) {
+  canvas
+    .getObjects()
+    .filter((o) => {
+      const d = (o as fabric.FabricObject & { data?: { tag?: string } }).data;
+      return d?.tag === TEMPLATE_TAG || d?.tag === GHOST_TAG;
+    })
+    .forEach((o) => canvas.remove(o));
 }

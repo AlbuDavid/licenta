@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import * as fabric from "fabric";
 import type { Canvas, FabricObject } from "fabric";
+import { enforceTemplateLocks } from "@/components/editor/utils/templateGeometry";
 
 const ZOOM_MIN  = 0.05;
 const ZOOM_MAX  = 20;
@@ -185,6 +186,8 @@ export const useEditorStore = create<EditorState & EditorActions>((set, get) => 
     set({ isRestoringHistory: true });
     try {
       await canvas.loadFromJSON(JSON.parse(history[newIndex]));
+      // Lock flags are not serialized — re-apply them on restored templates
+      enforceTemplateLocks(canvas);
       canvas.requestRenderAll();
       set({ historyIndex: newIndex });
     } finally {
@@ -200,6 +203,8 @@ export const useEditorStore = create<EditorState & EditorActions>((set, get) => 
     set({ isRestoringHistory: true });
     try {
       await canvas.loadFromJSON(JSON.parse(history[newIndex]));
+      // Lock flags are not serialized — re-apply them on restored templates
+      enforceTemplateLocks(canvas);
       canvas.requestRenderAll();
       set({ historyIndex: newIndex });
     } finally {
