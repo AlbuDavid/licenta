@@ -5,7 +5,7 @@ import { EditorLayout } from "@/components/editor/EditorLayout";
 
 /**
  * Dynamically import the canvas component with SSR disabled.
- * Fabric.js requires the browser DOM — the same pattern used in /produse/customize.
+ * Fabric.js requires the browser DOM, so the canvas is loaded client-side only.
  */
 const EditorCanvas = dynamic(
   () => import("@/components/editor/EditorCanvas"),

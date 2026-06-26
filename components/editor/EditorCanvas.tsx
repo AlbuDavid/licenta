@@ -3,8 +3,8 @@
 /**
  * EditorCanvas — browser-only canvas component.
  *
- * Dynamically imported with { ssr: false } in the editor page, following
- * the same pattern as /produse/customize, because Fabric.js requires the DOM.
+ * Dynamically imported with { ssr: false } in the editor page, because
+ * Fabric.js requires the DOM.
  *
  * Responsibilities:
  *  - Owns the container div and the <canvas> element

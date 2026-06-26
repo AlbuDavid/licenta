@@ -9,9 +9,8 @@ import { DOC_W, DOC_H } from "@/components/editor/editor.config";
  * Initialises a Fabric.js Canvas on a <canvas> element ref and keeps it
  * sized to a container div via ResizeObserver.
  *
- * - Inspired by /produse/customize: canvas fills its container dynamically
- *   and opens at 200% zoom with the DOC_W × DOC_H document centred in the
- *   viewport.
+ * - Canvas fills its container dynamically and opens at 200% zoom with the
+ *   DOC_W × DOC_H document centred in the viewport.
  * - Handles Next.js Strict Mode double-render: cleanup disposes Fabric before
  *   the second mount to avoid "canvas already initialised" errors.
  * - Saves the canvas instance to the Zustand editorStore.
