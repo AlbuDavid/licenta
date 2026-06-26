@@ -98,7 +98,7 @@ export function useExport() {
 
     const dataUrl = canvas.toDataURL({
       format:     "png",
-      multiplier: 2,          // 2× → crisp on retina; canvas is 4000 doc units
+      multiplier: 2,          // 2× → crisp on retina; canvas is 400 doc units
       quality:    1,
     });
 

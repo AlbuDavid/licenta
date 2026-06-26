@@ -13,10 +13,11 @@ export interface SelInfo { x: number; y: number; w: number; h: number; }
 export const CV_W = 960;
 export const CV_H = 620;
 
-/* Document size: 400 × 400 cm = 4000 × 4000 mm
-   1 fabric unit = 1 mm → perfect for laser work */
-export const DOC_W = 4000;
-export const DOC_H = 4000;
+/* Document size: 40 × 40 cm = 400 × 400 mm
+   1 fabric unit = 1 mm → perfect for laser work.
+   Single source of truth — the canvas, alignment and snapping hooks import these. */
+export const DOC_W = 400;
+export const DOC_H = 400;
 
 export const FONTS = [
   'Arial', 'Georgia', 'Times New Roman', 'Courier New',

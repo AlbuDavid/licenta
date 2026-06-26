@@ -5,6 +5,7 @@ import * as fabric from "fabric";
 import type { FabricObject } from "fabric";
 import { useEditorStore } from "@/store/editorStore";
 import { TEMPLATE_TAG } from "@/hooks/useProductTemplate";
+import { DOC_W } from "@/components/editor/editor.config";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -17,8 +18,8 @@ const GUIDE_COLOR = "#6366f1";
 /** Tag stored in `.data` to identify guide lines (never exported / deleted). */
 const GUIDE_TAG = "__snap_guide__";
 
-/** Document dimensions (mm) — guide lines span the full document. */
-const DOC = 4000;
+/** Document dimensions (mm) — guide lines span the full document. Sourced from editor.config. */
+const DOC = DOC_W;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

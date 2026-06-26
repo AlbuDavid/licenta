@@ -3,13 +3,15 @@
 import { useEffect, useRef } from "react";
 import * as fabric from "fabric";
 import { useEditorStore } from "@/store/editorStore";
+import { DOC_W, DOC_H } from "@/components/editor/editor.config";
 
 /**
  * Initialises a Fabric.js Canvas on a <canvas> element ref and keeps it
  * sized to a container div via ResizeObserver.
  *
  * - Inspired by /produse/customize: canvas fills its container dynamically
- *   and starts zoomed to fit the full 4000mm document.
+ *   and opens at 200% zoom with the DOC_W × DOC_H document centred in the
+ *   viewport.
  * - Handles Next.js Strict Mode double-render: cleanup disposes Fabric before
  *   the second mount to avoid "canvas already initialised" errors.
  * - Saves the canvas instance to the Zustand editorStore.
@@ -51,10 +53,16 @@ export function useFabricCanvas(
       preserveObjectStacking: true,
     });
 
-    // Fit the 4000mm document into the viewport on load (same as existing editor)
-    const initZoom = W / 4000;
-    canvas.setZoom(initZoom);
-    setZoom(Math.round(initZoom * 100));
+    // Open at 200% zoom and centre the DOC_W × DOC_H document in the viewport,
+    // so objects/templates added at the viewport centre land inside the document
+    // bounds. (1 fabric unit = 1 mm; at this zoom 1 mm = 2 screen px.)
+    const initZoom = 2;
+    canvas.setViewportTransform([
+      initZoom, 0, 0, initZoom,
+      (W - DOC_W * initZoom) / 2,
+      (H - DOC_H * initZoom) / 2,
+    ]);
+    setZoom(initZoom * 100);
 
     fabricRef.current = canvas;
     setCanvas(canvas);

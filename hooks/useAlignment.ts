@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import * as fabric from "fabric";
 import type { ActiveSelection, FabricObject, TPointerEventInfo } from "fabric";
 import { useEditorStore } from "@/store/editorStore";
+import { DOC_W } from "@/components/editor/editor.config";
 
-/** Document width / height in document units (matches useFabricCanvas.ts). */
-const DOC = 4000;
+/** Document width / height in document units (square — sourced from editor.config). */
+const DOC = DOC_W;
 
 export type AlignTarget     = "selection" | "page";
 export type DistributeOver  = "selection" | "page";
